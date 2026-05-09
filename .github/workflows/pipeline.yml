@@ -94,8 +94,14 @@ jobs:
         run: |
           git config user.name "coil[bot]"
           git config user.email "coil[bot]@users.noreply.github.com"
-          git add episodes/*.mp3 episodes/*.srt episodes/*.txt episodes/rss.xml episodes/episodes.yaml
-          git add episodes/*.png episodes/*.jpg 2>/dev/null || true
+          # Use nullglob so missing extensions (e.g. transcribe=false → no .srt
+          # yet, or a fresh fork with no episodes) don't fatally stop the job.
+          shopt -s nullglob
+          files=(episodes/*.mp3 episodes/*.srt episodes/*.txt episodes/*.png episodes/*.jpg)
+          shopt -u nullglob
+          git add episodes/episodes.yaml
+          [ -f episodes/rss.xml ] && git add episodes/rss.xml
+          [ ${#files[@]} -gt 0 ] && git add "${files[@]}"
           git diff --cached --quiet || git commit -m "Auto-process episodes [skip ci]"
           git add -u episodes/*.wav 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Remove converted WAV files [skip ci]"
