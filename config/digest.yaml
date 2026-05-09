@@ -1,0 +1,50 @@
+# =============================================================================
+# Daily Digest Configuration
+# =============================================================================
+# Tunables for scripts/daily_digest.py. Edit freely — re-runs pick up changes.
+# The only secret needed is XAI_API_KEY (used for both editorial and TTS).
+
+# ---- Show identity ---------------------------------------------------------
+# `season` in episodes.yaml is auto-derived from the publication date's year.
+show_name: "Tesla Daily"
+focus_areas: "Tesla (vehicles, energy, robotics, FSD, financials)"
+
+# ---- Cadence ---------------------------------------------------------------
+# daily     — Mon-Fri @ 06:00 UTC, covers yesterday (Mon covers Fri-Sun)
+# weekly    — Mondays @ 06:00 UTC, covers past 7 days
+# biweekly  — Every other Monday, covers past 14 days
+# monthly   — 1st of each month @ 06:00 UTC, covers past 30 days
+cadence: weekly
+num_stories: 12             # tight + punchy beats long; 12 stories ≈ 7-8 min show
+words_per_story: 80         # target word count per spoken paragraph (hard cap)
+lookback_episodes: 5        # past episode titles fed to Grok for dedupe
+
+# ---- xAI Grok (editorial) --------------------------------------------------
+xai_endpoint: "https://api.x.ai/v1/responses"
+xai_model: "grok-4.3"
+# Pass 1 = editor: picks the top stories using web/X search. High reasoning
+# pays off here (ranking + dedupe + judgment).
+# Pass 2 = writer: rewrites each story for spoken delivery, no tools. Medium
+# reasoning — the sharp prompt does the heavy lifting, not extra thinking.
+pass1_reasoning: "high"
+pass2_reasoning: "medium"
+pass2_batch_size: 4         # stories rewritten per Pass 2 call (12 stories → 3 batches)
+
+# ---- xAI TTS (narration) ---------------------------------------------------
+# Built-in voices: see https://api.x.ai/v1/tts/voices for the catalog.
+# To use a custom-cloned voice, record ~1min in the xAI console, copy the
+# voice ID, and paste it here.
+xai_tts_endpoint: "https://api.x.ai/v1/tts"
+xai_voice_id: "Ara"
+xai_tts_language: "en"
+
+# ---- Static audio bumpers --------------------------------------------------
+# These live in public/ alongside cover.jpg. They are also served at
+# https://<your-domain>/intro.wav etc. since public/ is the Cloudflare Pages
+# root — fine for brand jingles, not for anything sensitive.
+intro_wav: "public/intro.wav"
+outro_wav: "public/outro.wav"
+bumper_silence_ms: 400      # gap between intro/body/outro
+# Inter-story pauses are now produced by the TTS model itself (we send
+# the whole transcript in one /v1/tts call with [pause] tags between stories
+# — keeps voice tone/gain consistent across the whole show).

@@ -27,6 +27,7 @@ Thumbs.db
 .env*
 s3/
 temp/
+.tmp/
 
 # Build-generated (middleware modules)
 functions/_html-template.js

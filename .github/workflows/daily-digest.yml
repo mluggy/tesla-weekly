@@ -1,0 +1,68 @@
+name: Daily Digest
+
+on:
+  schedule:
+    # 06:00 UTC every Monday. Covers the past 7 days as one weekly episode
+    # (see resolve_dates() in scripts/daily_digest.py).
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Single publication date YYYY-MM-DD (overrides auto)'
+        required: false
+      start:
+        description: 'Range start YYYY-MM-DD (combined episode; use with end)'
+        required: false
+      end:
+        description: 'Range end YYYY-MM-DD (inclusive; required with start)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install -r requirements.txt -r scripts/daily_digest.requirements.txt
+
+      - name: Generate episode
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            python scripts/daily_digest.py --date "${{ inputs.date }}"
+          elif [ -n "${{ inputs.start }}" ] && [ -n "${{ inputs.end }}" ]; then
+            python scripts/daily_digest.py --start "${{ inputs.start }}" --end "${{ inputs.end }}"
+          else
+            python scripts/daily_digest.py --auto
+          fi
+
+      - name: Commit and push
+        run: |
+          git config user.name "tesla-daily[bot]"
+          git config user.email "tesla-daily[bot]@users.noreply.github.com"
+          git add episodes/*.wav episodes/*.txt episodes/episodes.yaml
+          if git diff --cached --quiet; then
+            echo "No changes to commit (episode may already exist)."
+            exit 0
+          fi
+          # Deliberately omit [skip ci] so coil's pipeline.yml retriggers
+          # and processes the new WAV (convert→transcribe→deploy).
+          git commit -m "Daily digest: $(date -u +%Y-%m-%d)"
+          git pull --rebase origin "$GITHUB_REF_NAME" || true
+          git push || (git pull --rebase origin "$GITHUB_REF_NAME" && git push)

@@ -4,22 +4,9 @@
 # Each key is the episode number (used as the episode ID and URL slug).
 # Required fields: season, title.
 # Optional: description, date, duration, size, guid, spotify_id, apple_id,
-#           youtube_id, amazon_id.
+#           youtube_id, amazon_id, cost.
 #
-# guid: Custom RSS GUID for this episode. If omitted, auto-generated as
-#   {podcast_guid first 8 chars}-s{season}e{episode}. Set this when migrating
-#   from another platform to preserve existing subscriber state.
-# date, duration, and size are auto-filled by the pipeline (from WAV
-#   conversion or from the MP3 itself). size is the MP3 byte length, used
-#   for the RSS <enclosure length> attribute.
-# Platform IDs enable deep-linking to the episode on each platform.
+# date, duration, and size are auto-filled by coil's pipeline.
+# cost (USD) is filled by daily_digest.py: Pass1 + Pass2 + TTS per episode.
 
-episodes:
-  1:
-    duration: "00:20"
-    size: 363976
-    season: 1
-    title: Welcome to coil
-    description: >-
-      This is a demo episode shipped with coil to show how things work.
-      Replace it with your own content — drop a WAV file and push!
+episodes: {}

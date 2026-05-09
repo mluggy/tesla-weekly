@@ -4,10 +4,10 @@
 # Deployments will fail loudly until both are set. Kept empty on purpose:
 # prevents a forgotten fork from writing to a shared default bucket.
 
-name = ""
+name = "tesla-daily"
 compatibility_date = "2026-03-01"
 pages_build_output_dir = "dist"
 
 [[r2_buckets]]
 binding = "R2_BUCKET"
-bucket_name = ""
+bucket_name = "tesla-daily"

@@ -1,9 +1,0 @@
-Welcome to coil! the self-hosted podcast platform.
-
-This is a demo episode.
-
-Drop a WAV file, push to git, and your podcast is live. Edit podcast.yaml to customize everything - your name, description, colors, language, and labels.
-
-Check out the README file for full instructions.
-
-Happy podcasting!
