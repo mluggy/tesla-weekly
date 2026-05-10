@@ -102,7 +102,7 @@ spotify_id: "2xIvIQsnwrRzScbklNiBoR"
 # Numeric Apple Podcasts ID - used to construct the show URL and
 # per-episode deep links automatically. Find it in your Apple Podcasts
 # Connect dashboard or in the show URL: podcasts.apple.com/.../id{THIS_NUMBER}
-apple_podcasts_id: ""
+apple_podcasts_id: "1772552096"
 
 # YouTube playlist ID - the value after "list=" in a playlist URL:
 # youtube.com/playlist?list={THIS_ID}. Used to construct the show URL.
@@ -113,7 +113,7 @@ youtube_id: ""
 # Amazon Music podcast ID - the last part of your Amazon URL:
 # music.amazon.com/podcasts/{THIS_ID}. Used to construct the show URL
 # and header icon link automatically.
-amazon_music_id: ""
+amazon_music_id: "e5108c72-a36a-4ec1-93e8-e72abf308c24"
 
 # -- Social links --
 # Shown as icons in the site footer and included in JSON-LD sameAs.
@@ -136,6 +136,10 @@ tiktok_username: ""
 
 # Full URL to your LinkedIn profile or page
 # (e.g. "https://www.linkedin.com/in/mluggy/").
+
+# GitHub repo for this site (used in JSON-LD sameAs to link the public
+# site to its source repo — enables agent platform discovery checks).
+github_url: "https://github.com/mluggy/tesla-daily"
 linkedin_url: "https://www.linkedin.com/in/mluggy/"
 
 # -- Player defaults --
