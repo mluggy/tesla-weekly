@@ -76,10 +76,19 @@ export const TOOLS = [
     title: "Get latest episode",
     description:
       "Return the most recently published episode with metadata, audio URL, and transcript URL. " +
-      "Use when a listener asks 'what's the new episode' or 'what just dropped'.",
+      "Use when a listener asks 'what's the new episode' or 'what just dropped'. " +
+      "Optionally pass `since` (ISO date YYYY-MM-DD) to only return episodes published after that date — " +
+      "lets agents skip episodes the listener has already heard.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        since: {
+          type: "string",
+          description: "Only return the latest episode published *after* this ISO date (YYYY-MM-DD). Omit to get the absolute latest.",
+          format: "date",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -109,10 +118,18 @@ export const TOOLS = [
     title: "Subscribe via RSS",
     description:
       "Return the canonical RSS feed URL so the listener can subscribe in their podcast app. " +
-      "Use when the listener says 'subscribe', 'follow', or asks how to get new episodes.",
+      "Use when the listener says 'subscribe', 'follow', or asks how to get new episodes. " +
+      "Pass `format: \"opml\"` to wrap the feed in a single-item OPML envelope (useful for batch import into apps that accept OPML).",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        format: {
+          type: "string",
+          description: "Response shape. \"url\" (default) returns just the RSS URL; \"opml\" returns an OPML XML envelope wrapping it.",
+          enum: ["url", "opml"],
+          default: "url",
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -175,9 +192,19 @@ function callTool(name, args, baseUrl) {
     }
     case "get_latest_episode": {
       const sorted = [...episodes].sort((a, b) => b.id - a.id);
-      const ep = sorted[0];
-      if (!ep) throw new Error("No episodes published yet.");
-      return summarizeEpisode(ep, baseUrl);
+      const since = typeof args.since === "string" ? args.since.trim() : "";
+      if (since && !/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+        throw new Error("`since` must be an ISO date in YYYY-MM-DD format.");
+      }
+      const candidate = since
+        ? sorted.find((e) => e.date && e.date > since)
+        : sorted[0];
+      if (!candidate) {
+        throw new Error(since
+          ? `No episodes published after ${since}.`
+          : "No episodes published yet.");
+      }
+      return summarizeEpisode(candidate, baseUrl);
     }
     case "list_episodes": {
       const sorted = [...episodes].sort((a, b) => b.id - a.id);
@@ -191,7 +218,22 @@ function callTool(name, args, baseUrl) {
       };
     }
     case "subscribe_via_rss": {
-      return { rss: `${baseUrl}/rss.xml` };
+      const rssUrl = `${baseUrl}/rss.xml`;
+      const format = String(args.format || "url").toLowerCase();
+      if (format === "opml") {
+        const title = (config.title || "Podcast")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+        const opml =
+          `<?xml version="1.0" encoding="UTF-8"?>\n` +
+          `<opml version="2.0">\n` +
+          `  <head><title>${title}</title></head>\n` +
+          `  <body>\n` +
+          `    <outline type="rss" text="${title}" title="${title}" xmlUrl="${rssUrl}" htmlUrl="${baseUrl}"/>\n` +
+          `  </body>\n` +
+          `</opml>\n`;
+        return { rss: rssUrl, format: "opml", opml };
+      }
+      return { rss: rssUrl, format: "url" };
     }
     default:
       throw new Error(`Unknown tool: ${name}. See tools/list for available tools.`);

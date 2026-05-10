@@ -68,12 +68,31 @@ const coverSize = readImageSize(coverData);
 const OG_WIDTH = coverSize.w;
 const OG_HEIGHT = coverSize.h;
 
-// Text area defaults
+// Text area defaults. og_text_area numbers are usually authored against a
+// canonical 3000×3000 cover; if the actual cover is smaller (e.g. a 640×640
+// fallback), the raw values overshoot the canvas and resvg panics on the
+// degenerate geometry. Detect that and scale proportionally.
 const textArea = config.og_text_area || {};
-const TEXT_TOP = textArea.top ?? 0;
-const TEXT_LEFT = textArea.left ?? 0;
-const TEXT_WIDTH = textArea.width ?? OG_WIDTH;
-const TEXT_HEIGHT = textArea.height ?? OG_HEIGHT;
+const rawTop = textArea.top ?? 0;
+const rawLeft = textArea.left ?? 0;
+const rawWidth = textArea.width ?? OG_WIDTH;
+const rawHeight = textArea.height ?? OG_HEIGHT;
+const xOverflow = rawLeft + rawWidth > OG_WIDTH;
+const yOverflow = rawTop + rawHeight > OG_HEIGHT;
+let TEXT_TOP = rawTop, TEXT_LEFT = rawLeft, TEXT_WIDTH = rawWidth, TEXT_HEIGHT = rawHeight;
+if (xOverflow || yOverflow) {
+  // Treat author-provided numbers as relative to whichever canonical
+  // dimension they were authored against. Pick the scale that brings both
+  // axes into bounds (the smaller of x/y ratios).
+  const xScale = OG_WIDTH / Math.max(rawLeft + rawWidth, OG_WIDTH);
+  const yScale = OG_HEIGHT / Math.max(rawTop + rawHeight, OG_HEIGHT);
+  const scale = Math.min(xScale, yScale);
+  TEXT_TOP = Math.round(rawTop * scale);
+  TEXT_LEFT = Math.round(rawLeft * scale);
+  TEXT_WIDTH = Math.round(rawWidth * scale);
+  TEXT_HEIGHT = Math.round(rawHeight * scale);
+  console.warn(`og_text_area overflowed ${OG_WIDTH}x${OG_HEIGHT} cover — scaled by ${scale.toFixed(3)} to ${TEXT_LEFT},${TEXT_TOP} ${TEXT_WIDTH}x${TEXT_HEIGHT}.`);
+}
 const TEXT_ALIGN = textArea.align || "center";
 const TEXT_VALIGN = textArea.valign || "middle";
 const TEXT_COLOR = config.og_text_color || "#ffffff";

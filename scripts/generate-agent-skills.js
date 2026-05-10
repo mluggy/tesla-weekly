@@ -3,8 +3,9 @@
 // capability an agent can perform on behalf of a listener.
 //
 // The index.json is the v0.2.0 discovery format: each entry carries
-// `type`, `url`, and `sha256:` digest of the artifact's raw bytes. Agents
-// fetch the index, verify each artifact, and load instructions on demand.
+// `type`, `url`, and a `digest` of the form `sha256:{64-hex-lowercase}`
+// over the artifact's raw bytes. Agents fetch the index, verify each
+// artifact, and load instructions on demand.
 //
 // IMPORTANT: SKILL.md bodies use *relative* paths (e.g. `/api/search`)
 // rather than {{SITE_URL}} placeholders. Relative paths keep the served
@@ -165,7 +166,7 @@ for (const skill of skills) {
     description: skill.description,
     type: "skill-md",
     url: `${SITE}/.well-known/agent-skills/${skill.name}/SKILL.md`,
-    sha256: sha256(md),
+    digest: sha256(md),
   });
 }
 

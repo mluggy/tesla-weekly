@@ -161,7 +161,13 @@ root.push("");
 root.push("## Section-level llms.txt");
 root.push(`- [Episodes](${SITE}/episodes/llms.txt) — full episode list with descriptions, guests, topics, chapters`);
 root.push(`- [API](${SITE}/api/llms.txt) — search/MCP/OpenAPI surface, focused`);
+root.push(`- [Docs](${SITE}/docs/llms.txt) — pointer to the listener-agent integration guide`);
 root.push(`- [Well-known](${SITE}/.well-known/llms.txt) — discovery files inventory`);
+root.push(`- [Full aggregate](${SITE}/llms-full.txt) — single-file concat of all sections (one fetch, full context)`);
+root.push("");
+
+root.push("## Pricing");
+root.push(`See [/pricing.md](${SITE}/pricing.md) for a structured pricing block (also embedded inline in [\`?mode=agent\`](${SITE}/?mode=agent)). ${config.pricing || "Free. No signup, no ads, no paywall."}`);
 root.push("");
 
 const platforms = [
@@ -362,8 +368,11 @@ wk.push("");
 wk.push("## Other discovery surfaces (outside /.well-known)");
 wk.push("");
 wk.push(`- [/llms.txt](${SITE}/llms.txt) — show-level briefing`);
+wk.push(`- [/llms-full.txt](${SITE}/llms-full.txt) — single-file aggregate of all sections (one fetch)`);
 wk.push(`- [/episodes/llms.txt](${SITE}/episodes/llms.txt) — full episode list`);
 wk.push(`- [/api/llms.txt](${SITE}/api/llms.txt) — API surface briefing`);
+wk.push(`- [/docs/llms.txt](${SITE}/docs/llms.txt) — docs section briefing`);
+wk.push(`- [/pricing.md](${SITE}/pricing.md) — machine-readable pricing`);
 wk.push(`- [/index.md](${SITE}/index.md) — markdown homepage`);
 wk.push(`- [/AGENTS.md](${SITE}/AGENTS.md) — agent contributor notes`);
 wk.push(`- [/sitemap.xml](${SITE}/sitemap.xml), [/robots.txt](${SITE}/robots.txt), [/rss.xml](${SITE}/rss.xml)`);
@@ -406,3 +415,37 @@ docs.push("");
 mkdirSync("public/docs", { recursive: true });
 writeFileSync("public/docs/llms.txt", docs.join("\n"));
 console.log("Generated public/docs/llms.txt");
+
+// ─── /llms-full.txt ───────────────────────────────────────────────────────
+// Single-file aggregate. Lets agents that prefer one fetch over crawling
+// (orank, llms-full convention) ingest the entire show context in one
+// request. Concatenates the four section files we just wrote.
+const full = [];
+full.push(`# ${config.title} — full agent briefing`);
+full.push("");
+full.push(`> Single-file aggregate of all section-level llms.txt files for ${config.title}. Generated at build time so agents can fetch one URL and skip the crawl. Sections are delimited with \`---\`.`);
+full.push("");
+full.push(`Sections in order: root briefing → API surface → .well-known discovery → docs → full episode catalog. Last updated at deploy.`);
+full.push("");
+full.push("---");
+full.push("");
+full.push(root.join("\n"));
+full.push("");
+full.push("---");
+full.push("");
+full.push(api.join("\n"));
+full.push("");
+full.push("---");
+full.push("");
+full.push(wk.join("\n"));
+full.push("");
+full.push("---");
+full.push("");
+full.push(docs.join("\n"));
+full.push("");
+full.push("---");
+full.push("");
+full.push(eps.join("\n"));
+full.push("");
+writeFileSync("public/llms-full.txt", full.join("\n"));
+console.log(`Generated public/llms-full.txt (aggregate of root + api + .well-known + docs + episodes)`);

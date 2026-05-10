@@ -439,7 +439,8 @@ function buildAgentJson(episode, baseUrl) {
 
   const payload = {
     mode: "agent",
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
+    version: "1.1.0",
     name: config.title,
     description: config.description || "",
     url: baseUrl,
@@ -449,7 +450,14 @@ function buildAgentJson(episode, baseUrl) {
     ...(config.update_frequency ? { updateFrequency: config.update_frequency } : {}),
     ...(topics.length ? { topics } : {}),
     ...(config.agent_recommendation ? { whenToRecommend: config.agent_recommendation } : {}),
-    pricing: { model: "free", price: 0, currency: "USD", note: config.pricing || "Free. No signup, no ads, no paywall." },
+    ...(config.github_url ? { repository: config.github_url } : {}),
+    pricing: {
+      model: "free",
+      price: 0,
+      currency: "USD",
+      note: config.pricing || "Free. No signup, no ads, no paywall.",
+      url: `${baseUrl}/pricing.md`,
+    },
     auth: { type: "none", required: false, note: "All endpoints are public read-only." },
     webhooks: { supported: false, note: "Push notifications via RSS only." },
     rateLimits: {
@@ -469,6 +477,9 @@ function buildAgentJson(episode, baseUrl) {
     ],
     endpoints: {
       search: `${baseUrl}/api/search?q={query}`,
+      ask: `${baseUrl}/ask`,
+      askGet: `${baseUrl}/ask?q={query}`,
+      status: `${baseUrl}/status`,
       mcp: `${baseUrl}/mcp`,
       mcpDiscovery: [
         `${baseUrl}/.well-known/mcp`,
@@ -476,20 +487,30 @@ function buildAgentJson(episode, baseUrl) {
         `${baseUrl}/.well-known/mcp-configuration`,
         `${baseUrl}/.well-known/mcp/server.json`,
       ],
+      mcpServerCard: `${baseUrl}/.well-known/mcp/server-card.json`,
       openapi: `${baseUrl}/.well-known/openapi.json`,
       agentJson: `${baseUrl}/.well-known/agent.json`,
       agentCard: `${baseUrl}/.well-known/agent-card.json`,
       agentSkillsIndex: `${baseUrl}/.well-known/agent-skills/index.json`,
       schemaMap: `${baseUrl}/.well-known/schema-map.xml`,
+      apiCatalog: `${baseUrl}/.well-known/api-catalog`,
+      webBotAuth: `${baseUrl}/.well-known/http-message-signatures-directory`,
       rss: `${baseUrl}/rss.xml`,
       sitemap: `${baseUrl}/sitemap.xml`,
+      robots: `${baseUrl}/robots.txt`,
       episodes: `${baseUrl}/episodes.json`,
       searchIndex: `${baseUrl}/search-index.json`,
       llms: `${baseUrl}/llms.txt`,
+      llmsFull: `${baseUrl}/llms-full.txt`,
       episodesLlms: `${baseUrl}/episodes/llms.txt`,
       apiLlms: `${baseUrl}/api/llms.txt`,
+      docsLlms: `${baseUrl}/docs/llms.txt`,
       wellKnownLlms: `${baseUrl}/.well-known/llms.txt`,
       indexMarkdown: `${baseUrl}/index.md`,
+      docs: `${baseUrl}/docs.md`,
+      pricing: `${baseUrl}/pricing.md`,
+      agents: `${baseUrl}/AGENTS.md`,
+      ...(config.owner_email ? { support: `mailto:${config.owner_email}` } : {}),
     },
     ...(episode
       ? { episode: epView(episode) }
@@ -945,6 +966,8 @@ const SITE_URL_REWRITES = new Set([
   "/.well-known/http-message-signatures-directory",
   "/AGENTS.md",
   "/docs.md",
+  "/pricing.md",
+  "/llms-full.txt",
 ]);
 
 const REWRITE_CONTENT_TYPES = {
@@ -967,6 +990,8 @@ const REWRITE_CONTENT_TYPES = {
   "/.well-known/http-message-signatures-directory": "application/json; charset=utf-8",
   "/AGENTS.md": "text/markdown; charset=utf-8",
   "/docs.md": "text/markdown; charset=utf-8",
+  "/pricing.md": "text/markdown; charset=utf-8",
+  "/llms-full.txt": "text/plain; charset=utf-8",
 };
 
 const REWRITE_CACHE_CONTROL = {
@@ -988,6 +1013,8 @@ const REWRITE_CACHE_CONTROL = {
   "/.well-known/http-message-signatures-directory": "public, max-age=3600, stale-while-revalidate=604800",
   "/AGENTS.md": "public, max-age=3600, stale-while-revalidate=604800",
   "/docs.md": "public, max-age=3600, stale-while-revalidate=604800",
+  "/pricing.md": "public, max-age=3600, stale-while-revalidate=604800",
+  "/llms-full.txt": "public, max-age=3600, stale-while-revalidate=604800",
 };
 
 // Cache rules for static files served through middleware (mirrors _headers)
@@ -1055,27 +1082,30 @@ export async function onRequest({ request, next, env }) {
     return buildEpisodeMarkdown(ep, baseUrl);
   }
 
-  // /docs alias → serve /docs.md bytes with markdown content-type.
-  // Pages routes by URL path, so we can't simply call next() with a
-  // rewritten URL — fetch the static asset via env.ASSETS instead.
-  if (path === "/docs") {
+  // /docs and /pricing aliases → serve the corresponding .md bytes with
+  // markdown content-type. Pages routes by URL path, so we can't simply
+  // call next() with a rewritten URL — fetch the static asset via
+  // env.ASSETS instead.
+  const ALIAS_TO_FILE = { "/docs": "/docs.md", "/pricing": "/pricing.md" };
+  if (ALIAS_TO_FILE[path]) {
+    const target = ALIAS_TO_FILE[path];
     if (env?.ASSETS) {
-      const docsUrl = new URL(request.url);
-      docsUrl.pathname = "/docs.md";
-      const upstream = await env.ASSETS.fetch(new Request(docsUrl, request));
+      const url = new URL(request.url);
+      url.pathname = target;
+      const upstream = await env.ASSETS.fetch(new Request(url, request));
       const text = (await upstream.text()).replace(/\{\{SITE_URL\}\}/g, baseUrl);
       return new Response(text, {
         status: upstream.status,
         headers: {
           "Content-Type": "text/markdown; charset=utf-8",
-          "Cache-Control": REWRITE_CACHE_CONTROL["/docs.md"],
+          "Cache-Control": REWRITE_CACHE_CONTROL[target],
           Vary: "Accept",
           Link: linkHeader(baseUrl, null),
         },
       });
     }
     // No ASSETS binding (shouldn't happen on Pages) → redirect.
-    return redirect301("/docs.md");
+    return redirect301(target);
   }
 
   // Static assets: pass through to Pages with cache headers

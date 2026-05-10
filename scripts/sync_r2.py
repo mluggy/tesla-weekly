@@ -56,6 +56,7 @@ def main():
     )
     bucket = os.environ.get("R2_BUCKET")
 
+    failures = 0
     for entry in sorted(os.listdir(args.episodes_dir)):
         ext = os.path.splitext(entry)[1].lower()
         if ext not in EXTENSIONS:
@@ -78,7 +79,11 @@ def main():
             s3.upload_file(local_path, bucket, key, ExtraArgs={"ContentType": content_type})
             print(key)
         except Exception as exc:
+            failures += 1
             print(f"Error uploading {key}: {exc}", file=sys.stderr)
+
+    if failures:
+        sys.exit(f"sync_r2: {failures} upload(s) failed")
 
 
 if __name__ == "__main__":

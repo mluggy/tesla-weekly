@@ -9,6 +9,13 @@ const SITE = "{{SITE_URL}}";
 
 const urls = [
   { loc: `${SITE}/`, lastmod: episodes[episodes.length - 1]?.date || "", priority: "1.0" },
+  // Agent-facing surface — listed in the sitemap so generic crawlers and
+  // discovery scanners (orank, search engines, etc.) can find the
+  // machine-readable surface without probing well-known paths.
+  { loc: `${SITE}/docs`, lastmod: "", priority: "0.6" },
+  { loc: `${SITE}/pricing`, lastmod: "", priority: "0.6" },
+  { loc: `${SITE}/llms.txt`, lastmod: "", priority: "0.5" },
+  { loc: `${SITE}/llms-full.txt`, lastmod: "", priority: "0.5" },
   ...episodes.map((ep) => ({
     loc: `${SITE}/${ep.id}`,
     lastmod: ep.date || "",
