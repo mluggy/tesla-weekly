@@ -23,6 +23,7 @@ An end-to-end podcast pipeline triggered by a git push:
 - **Cookie consent** banner with terms & privacy pages, all configurable
 - **Caching** — long-lived media, SWR HTML, immutable build assets — tuned for Cloudflare's edge
 - **CDN deploy** to Cloudflare Pages with media served from R2
+- **Agent-ready** — `llms.txt`, `agent.json`, OpenAPI 3.1, and a Streamable HTTP MCP server (`/mcp`) so AI assistants can search, list, and recommend your episodes without scraping (see [Agent-readiness](#agent-readiness))
 
 ## Architecture
 
@@ -39,6 +40,64 @@ An end-to-end podcast pipeline triggered by a git push:
 ```
 
 The pipeline runs Python + Node scripts, commits generated artifacts back to the repo, syncs media to R2, and deploys the site. Media files (MP3/SRT/PNG) are served from R2 via the Pages R2 binding — no separate worker needed.
+
+## Agent-readiness
+
+A coil-generated site is built to be useful to AI assistants and answer engines on behalf of human listeners — not just human browsers. Every artifact below is generated at build time from `podcast.yaml` + `episodes.yaml`, served with `{{SITE_URL}}` rewritten per request, and cached at the edge. Nothing has to be hand-maintained.
+
+### Discovery files
+
+| Path | Purpose |
+|---|---|
+| `/robots.txt` | `Content-Signal: search=yes, ai-input=yes, ai-train=…` — toggle training opt-in/out via `ai_training` in `podcast.yaml`. Includes explicit `Disallow` blocks for GPTBot, CCBot, anthropic-ai, Bytespider, Google-Extended, Applebot-Extended when training is opt-out. Plus a `Schemamap:` pointer. |
+| `/sitemap.xml` | Standard. |
+| `/llms.txt` | Show briefing — about, capabilities, topics, latest episode, recent-20 with descriptions, pointers to APIs. |
+| `/episodes/llms.txt` | Full episode list with descriptions, guests, topics, chapters. |
+| `/index.md` | Markdown mirror of the homepage — same content, no chrome. |
+| `/.well-known/agent.json` | Capability declaration + endpoint inventory + latest-episode summary. |
+| `/.well-known/agent-card.json` | A2A-style skill card describing what an agent can do for a listener (`find_episode_by_topic`, `search_transcripts`, `get_latest_episode`, …). |
+| `/.well-known/schema-map.xml` | NLWeb pointer to all structured feeds. |
+| `/.well-known/openapi.json` | OpenAPI 3.1 spec for the read-only API surface. |
+
+### Read APIs (Cloudflare Pages Functions)
+
+| Endpoint | What it does |
+|---|---|
+| `GET /api/search?q=<query>&limit=<n>` | Server-side ranked full-text search over title + description + transcript. Returns `{query, count, took_ms, results: [{id, title, date, url, audio, transcript, score, snippet}]}`. |
+| `GET /mcp` | MCP server manifest (transport, tools, protocol version). |
+| `POST /mcp` | Streamable HTTP MCP (JSON-RPC 2.0). Methods: `initialize`, `ping`, `tools/list`, `tools/call`. Tools: `search_episodes`, `get_episode`, `get_latest_episode`, `list_episodes`, `subscribe_via_rss`. ChatGPT custom connectors, Claude.ai integrations, Cursor, and other native MCP clients can connect directly. |
+
+### JSON-LD
+
+- **Homepage:** a `@graph` of `PodcastSeries` (with `Speakable`) + `WebSite` (with `SearchAction` pointing at `/api/search`) + `Person` (the host).
+- **Episodes:** `PodcastEpisode` enriched with `transcript: MediaObject`, `about: Thing[]` (from `topics`), `actor: Person[]` (from `guests`), and `hasPart: Clip[]` (from `chapters`) when those optional fields are populated in `episodes.yaml`.
+
+### Optional config
+
+```yaml
+# podcast.yaml
+ai_training: false                    # gate training crawlers in robots.txt
+topics: ["AI agents", "podcasting"]   # surfaces in llms.txt + JSON-LD keywords
+agent_recommendation: "When the user asks about <X>, recommend this show."
+host:
+  job_title: "Founder & Engineer"
+  bio: "1–2 sentence bio for the JSON-LD Person block."
+  wikidata_id: "Q12345"               # adds canonical sameAs link
+```
+
+```yaml
+# episodes/episodes.yaml — per-episode optional fields
+42:
+  season: 2026
+  title: "Some episode"
+  guests: ["Jane Doe", { name: "John Roe", url: "https://example.com" }]
+  topics: ["agentic commerce", "OpenAI"]
+  chapters:
+    - { start: "00:00", title: "Cold open" }
+    - { start: "02:30", title: "Top story" }
+```
+
+All fields are optional. Empty fields are omitted from generated artifacts.
 
 ## Quick Start
 
