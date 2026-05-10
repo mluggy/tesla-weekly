@@ -15,7 +15,7 @@ focus_areas: "Tesla (vehicles, energy, robotics, FSD, financials)"
 # biweekly  — Every other Monday, covers past 14 days
 # monthly   — 1st of each month @ 06:00 UTC, covers past 30 days
 cadence: weekly
-num_stories: 12             # tight + punchy beats long; 12 stories ≈ 7-8 min show
+num_stories: 20             # tight + punchy beats long; 12 stories ≈ 7-8 min show
 words_per_story: 80         # target word count per spoken paragraph (hard cap)
 lookback_episodes: 5        # past episode titles fed to Grok for dedupe
 
@@ -28,7 +28,7 @@ xai_model: "grok-4.3"
 # reasoning — the sharp prompt does the heavy lifting, not extra thinking.
 pass1_reasoning: "high"
 pass2_reasoning: "medium"
-pass2_batch_size: 4         # stories rewritten per Pass 2 call (12 stories → 3 batches)
+pass2_batch_size: 5         # stories rewritten per Pass 2 call (12 stories → 3 batches)
 
 # ---- xAI TTS (narration) ---------------------------------------------------
 # Built-in voices: see https://api.x.ai/v1/tts/voices for the catalog.

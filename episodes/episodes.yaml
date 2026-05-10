@@ -9,4 +9,12 @@
 # date, duration, and size are auto-filled by coil's pipeline.
 # cost (USD) is filled by daily_digest.py: Pass1 + Pass2 + TTS per episode.
 
-episodes: {}
+episodes:
+  1:
+    season: 2026
+    title: Tesla Semi Production Ignites Amid FSD and Sales Gains
+    description: This episode covers the start of high-volume Tesla Semi 
+      production, FSD v14.3.2 rollout to HW4 vehicles, Tesla Insurance expansion
+      to Florida and Maryland, strong April sales rebound in Europe, and 
+      progress on Optimus factory and AI5 chip.
+    cost: 2.1349
