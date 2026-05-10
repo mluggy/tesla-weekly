@@ -35,7 +35,7 @@ pass2_batch_size: 4         # stories rewritten per Pass 2 call (12 stories → 
 # To use a custom-cloned voice, record ~1min in the xAI console, copy the
 # voice ID, and paste it here.
 xai_tts_endpoint: "https://api.x.ai/v1/tts"
-xai_voice_id: "Ara"
+xai_voice_id: "Rex"
 xai_tts_language: "en"
 
 # ---- Static audio bumpers --------------------------------------------------
