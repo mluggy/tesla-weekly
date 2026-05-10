@@ -6,10 +6,15 @@
 // Theme is pulled from the show's podcast.yaml: accent_color, bg_dark,
 // bg_light, default_theme. Cards work in both light and dark surfaces
 // via prefers-color-scheme media queries.
+//
+// Each resource is a full HTML5 document (DOCTYPE + color-scheme meta)
+// served with `text/html;profile=mcp-app` per the MCP Apps spec.
 
 import episodes from "./_episodes.js";
 import config from "./_config.js";
 import { searchEpisodes, summarizeEpisode } from "./_search.js";
+
+export const MCP_APP_MIME = "text/html;profile=mcp-app";
 
 const ACCENT = config.accent_color || "#ff4d00";
 const BG_DARK = config.bg_dark || "#0a0a0b";
@@ -22,6 +27,26 @@ function esc(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// Wrap card body in a complete HTML5 document. MCP clients render this
+// in an iframe / sandboxed surface — the DOCTYPE, viewport, and
+// color-scheme meta are required for reliable rendering across light
+// and dark themes.
+function wrapDocument(title, body) {
+  return `<!DOCTYPE html>
+<html lang="${esc(config.language || "en")}" dir="${esc(config.direction || "ltr")}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>${esc(title)}</title>
+${styles()}
+</head>
+<body>
+${body}
+</body>
+</html>`;
 }
 
 // Common stylesheet — prefers-color-scheme aware, sized for inline render.
@@ -99,8 +124,7 @@ function episodeCard(ep, baseUrl) {
 
   return `
 <div class="coil-card">
-  ${styles()}
-  <img class="cover" src="${esc(coverUrl(ep, baseUrl))}" alt="${esc(ep.title)} cover" onerror="this.style.display='none'" />
+<img class="cover" src="${esc(coverUrl(ep, baseUrl))}" alt="${esc(ep.title)} cover" onerror="this.style.display='none'" />
   <h3>${esc(ep.title)}</h3>
   <div class="meta">${esc(meta)}</div>
   ${ep.desc ? `<p class="desc">${esc(ep.desc)}</p>` : ""}
@@ -116,7 +140,7 @@ function episodeCard(ep, baseUrl) {
 
 function searchResultsCard(query, results, baseUrl) {
   if (!results.length) {
-    return `<div class="coil-card">${styles()}<h3>No matches for "${esc(query)}"</h3><p class="coil-empty">Try a broader search, or browse the catalog at <a href="${esc(`${baseUrl}/episodes/llms.txt`)}" target="_blank" style="color:${ACCENT}">/episodes/llms.txt</a>.</p></div>`;
+    return `<div class="coil-card"><h3>No matches for "${esc(query)}"</h3><p class="coil-empty">Try a broader search, or browse the catalog at <a href="${esc(`${baseUrl}/episodes/llms.txt`)}" target="_blank" style="color:${ACCENT}">/episodes/llms.txt</a>.</p></div>`;
   }
   const items = results.map((r) => `
     <li>
@@ -126,8 +150,7 @@ function searchResultsCard(query, results, baseUrl) {
     </li>`).join("");
   return `
 <div class="coil-card">
-  ${styles()}
-  <h3>${results.length} result${results.length === 1 ? "" : "s"} for "${esc(query)}"</h3>
+<h3>${results.length} result${results.length === 1 ? "" : "s"} for "${esc(query)}"</h3>
   <ul class="coil-list">${items}</ul>
   <div class="links" style="margin-top:14px">
     <a class="secondary" href="${esc(`${baseUrl}/api/search?q=${encodeURIComponent(query)}`)}" target="_blank">Open full search</a>
@@ -138,7 +161,7 @@ function searchResultsCard(query, results, baseUrl) {
 function catalogCard(baseUrl, limit = 12) {
   const sorted = [...episodes].sort((a, b) => b.id - a.id).slice(0, limit);
   if (!sorted.length) {
-    return `<div class="coil-card">${styles()}<h3>${esc(config.title)}</h3><p class="coil-empty">No episodes published yet.</p></div>`;
+    return `<div class="coil-card"><h3>${esc(config.title)}</h3><p class="coil-empty">No episodes published yet.</p></div>`;
   }
   const items = sorted.map((ep) => `
     <li>
@@ -148,8 +171,7 @@ function catalogCard(baseUrl, limit = 12) {
     </li>`).join("");
   return `
 <div class="coil-card">
-  ${styles()}
-  <h3>${esc(config.title)} — recent episodes</h3>
+<h3>${esc(config.title)} — recent episodes</h3>
   <ul class="coil-list">${items}</ul>
   <div class="links" style="margin-top:14px">
     <a href="${esc(baseUrl)}" target="_blank">Browse all</a>
@@ -166,13 +188,13 @@ export function listUiResources(/* baseUrl */) {
       uri: "ui://latest_episode",
       name: "Latest episode card",
       description: "A playable card with cover, title, audio control, and subscribe links for the most recent episode.",
-      mimeType: "text/html",
+      mimeType: MCP_APP_MIME,
     },
     {
       uri: "ui://catalog",
       name: "Episode catalog card",
       description: "A list of recent episodes with titles, dates, and short descriptions.",
-      mimeType: "text/html",
+      mimeType: MCP_APP_MIME,
     },
   ];
 }
@@ -183,51 +205,50 @@ export function listUiResourceTemplates() {
       uriTemplate: "ui://episode/{id}",
       name: "Episode card by id",
       description: "Playable card for a specific episode.",
-      mimeType: "text/html",
+      mimeType: MCP_APP_MIME,
     },
     {
       uriTemplate: "ui://search?q={query}&limit={limit}",
       name: "Search results card",
       description: "Themed list of episode matches for a search query.",
-      mimeType: "text/html",
+      mimeType: MCP_APP_MIME,
     },
   ];
 }
 
-// Resolve a ui:// URI to HTML. Returns null for unknown URIs (caller turns
-// that into an MCP error). Throws for malformed inputs the caller should
-// surface.
+// Resolve a ui:// URI to a complete HTML5 document. Returns null for
+// unknown URIs (caller turns that into an MCP error).
 export function buildUiResource(uri, baseUrl) {
   if (typeof uri !== "string" || !uri.startsWith("ui://")) return null;
 
+  const sorted = [...episodes].sort((a, b) => b.id - a.id);
+
   if (uri === "ui://latest_episode") {
-    const sorted = [...episodes].sort((a, b) => b.id - a.id);
     const ep = sorted[0];
-    if (!ep) return `<div class="coil-card">${styles()}<h3>${esc(config.title)}</h3><p class="coil-empty">No episodes yet.</p></div>`;
-    return episodeCard(ep, baseUrl);
+    if (!ep) return wrapDocument(config.title, `<div class="coil-card"><h3>${esc(config.title)}</h3><p class="coil-empty">No episodes yet.</p></div>`);
+    return wrapDocument(`${ep.title} — ${config.title}`, episodeCard(ep, baseUrl));
   }
 
   if (uri === "ui://catalog") {
-    return catalogCard(baseUrl);
+    return wrapDocument(`${config.title} — recent episodes`, catalogCard(baseUrl));
   }
 
   const epMatch = uri.match(/^ui:\/\/episode\/(\d{1,4})$/);
   if (epMatch) {
     const id = parseInt(epMatch[1], 10);
     const ep = episodes.find((e) => e.id === id);
-    if (!ep) return `<div class="coil-card">${styles()}<h3>Episode #${id} not found</h3><p class="coil-empty">Try the catalog at <a href="${esc(baseUrl)}" target="_blank" style="color:${ACCENT}">${esc(baseUrl)}</a>.</p></div>`;
-    return episodeCard(ep, baseUrl);
+    if (!ep) return wrapDocument(`Episode #${id} not found`, `<div class="coil-card"><h3>Episode #${id} not found</h3><p class="coil-empty">Try the catalog at <a href="${esc(baseUrl)}" target="_blank" style="color:${ACCENT}">${esc(baseUrl)}</a>.</p></div>`);
+    return wrapDocument(`${ep.title} — ${config.title}`, episodeCard(ep, baseUrl));
   }
 
   if (uri.startsWith("ui://search")) {
-    // Parse the query string after `ui://search?`.
     const qs = uri.includes("?") ? uri.slice(uri.indexOf("?") + 1) : "";
     const params = new URLSearchParams(qs);
     const query = (params.get("q") || params.get("query") || "").trim();
     const limit = Math.min(20, Math.max(1, parseInt(params.get("limit") || "5", 10) || 5));
-    if (!query) return `<div class="coil-card">${styles()}<h3>Search</h3><p class="coil-empty">Pass a query: ui://search?q=&lt;your+question&gt;</p></div>`;
+    if (!query) return wrapDocument("Search", `<div class="coil-card"><h3>Search</h3><p class="coil-empty">Pass a query: ui://search?q=&lt;your+question&gt;</p></div>`);
     const results = searchEpisodes(query, { limit, baseUrl });
-    return searchResultsCard(query, results, baseUrl);
+    return wrapDocument(`Search: ${query}`, searchResultsCard(query, results, baseUrl));
   }
 
   return null;

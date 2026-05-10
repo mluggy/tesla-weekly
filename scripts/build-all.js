@@ -19,6 +19,7 @@ const steps = [
   { label: "generate-docs", cmd: "node scripts/generate-docs.js" },
   { label: "generate-agent-files", cmd: "node scripts/generate-agent-files.js" },
   { label: "generate-agent-skills", cmd: "node scripts/generate-agent-skills.js" },
+  { label: "generate-web-bot-auth", cmd: "node scripts/generate-web-bot-auth.js" },
   { label: "generate-openapi", cmd: "node scripts/generate-openapi.js" },
   { label: "vite build", cmd: "npx vite build" },
   { label: "generate-html-template", cmd: "node scripts/generate-html-template.js" },

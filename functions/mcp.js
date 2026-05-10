@@ -13,7 +13,7 @@ import episodes from "./_episodes.js";
 import config from "./_config.js";
 import { searchEpisodes, summarizeEpisode } from "./_search.js";
 import { apiHeaders, corsPreflight, errors } from "./_api.js";
-import { buildUiResource, listUiResources, listUiResourceTemplates, uiResourceForTool } from "./_mcp_apps.js";
+import { buildUiResource, listUiResources, listUiResourceTemplates, uiResourceForTool, MCP_APP_MIME } from "./_mcp_apps.js";
 
 export const SERVER_INFO = {
   name: "coil-podcast-mcp",
@@ -22,9 +22,20 @@ export const SERVER_INFO = {
 
 export const PROTOCOL_VERSION = "2025-03-26";
 
+// All tools are read-only views of static episode data — no writes, no
+// destructive operations, no external side effects. The `annotations`
+// block tells agents that calling them never requires user confirmation.
+const READ_ONLY_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
 export const TOOLS = [
   {
     name: "search_episodes",
+    title: "Search episodes",
     description:
       `Search ${config.title || "podcast"} episodes by topic, person, company, or keyword. ` +
       "Returns ranked results with title, date, URL, and a snippet from the transcript. " +
@@ -36,10 +47,16 @@ export const TOOLS = [
         limit: { type: "integer", description: "Max results (1–50).", default: 10, minimum: 1, maximum: 50 },
       },
       required: ["query"],
+      additionalProperties: false,
     },
+    annotations: { ...READ_ONLY_ANNOTATIONS, title: "Search episodes" },
+    // MCP Apps: agents that support ui:// can render a themed search-results
+    // card by reading the resource at this URI (templated per call).
+    _meta: { "ui": { resourceUri: "ui://search?q={query}&limit={limit}" } },
   },
   {
     name: "get_episode",
+    title: "Get episode",
     description:
       "Fetch a single episode by its numeric ID. Returns title, date, description, audio URL, transcript URL, and full transcript text. " +
       "Use when a listener references an episode number, or after a search picked one out.",
@@ -49,17 +66,29 @@ export const TOOLS = [
         id: { type: "integer", description: "Episode number (1, 2, …).", minimum: 1 },
       },
       required: ["id"],
+      additionalProperties: false,
     },
+    annotations: { ...READ_ONLY_ANNOTATIONS, title: "Get episode" },
+    _meta: { "ui": { resourceUri: "ui://episode/{id}" } },
   },
   {
     name: "get_latest_episode",
+    title: "Get latest episode",
     description:
       "Return the most recently published episode with metadata, audio URL, and transcript URL. " +
       "Use when a listener asks 'what's the new episode' or 'what just dropped'.",
-    inputSchema: { type: "object", properties: {} },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: { ...READ_ONLY_ANNOTATIONS, title: "Get latest episode" },
+    _meta: { "ui": { resourceUri: "ui://latest_episode" } },
   },
   {
     name: "list_episodes",
+    title: "List episodes",
     description:
       "Return episodes in reverse-chronological order with pagination. " +
       "Use when a listener wants to browse the catalog.",
@@ -69,16 +98,39 @@ export const TOOLS = [
         limit: { type: "integer", default: 20, minimum: 1, maximum: 100 },
         offset: { type: "integer", default: 0, minimum: 0 },
       },
+      required: [],
+      additionalProperties: false,
     },
+    annotations: { ...READ_ONLY_ANNOTATIONS, title: "List episodes" },
+    _meta: { "ui": { resourceUri: "ui://catalog" } },
   },
   {
     name: "subscribe_via_rss",
+    title: "Subscribe via RSS",
     description:
       "Return the canonical RSS feed URL so the listener can subscribe in their podcast app. " +
       "Use when the listener says 'subscribe', 'follow', or asks how to get new episodes.",
-    inputSchema: { type: "object", properties: {} },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: { ...READ_ONLY_ANNOTATIONS, title: "Subscribe via RSS" },
   },
 ];
+
+// Server instructions surfaced via the MCP `initialize` response.
+// Tells the agent what this server is for and what it can/can't do.
+const INSTRUCTIONS = [
+  `Listener-facing read-only MCP server for ${config.title || "this podcast"}.`,
+  "All tools are safe to call without user confirmation: they only read static episode data.",
+  "There are no write operations, no destructive actions, no external side effects, and no auth.",
+  "Use search_episodes for topic/person/company queries; get_latest_episode for 'what's new'; get_episode(id) for a specific number; list_episodes to browse; subscribe_via_rss to hand the listener the RSS URL.",
+  config.agent_recommendation ? `When to recommend: ${config.agent_recommendation}` : "",
+  "Rate limits: 60 requests/minute per IP across the entire site (responses include X-RateLimit-* headers).",
+  "MCP Apps: tool definitions include _meta.ui.resourceUri pointing to ui:// resources that render playable cards inline; fetch with resources/read.",
+].filter(Boolean).join(" ");
 
 function jrpcOk(id, result) {
   return new Response(JSON.stringify({ jsonrpc: "2.0", id, result }), {
@@ -171,6 +223,7 @@ export async function handleMcpPost(request) {
         resources: { subscribe: false, listChanged: false },
       },
       serverInfo: SERVER_INFO,
+      instructions: INSTRUCTIONS,
     });
   }
   if (method === "ping") return jrpcOk(id, {});
@@ -178,11 +231,23 @@ export async function handleMcpPost(request) {
   if (method === "tools/call") {
     const name = params?.name;
     const args = params?.arguments || {};
-    if (!name) return jrpcErr(id, -32602, "Invalid params: missing tool name");
+    if (!name) {
+      return jrpcErr(id, -32602, "Invalid params: missing tool name", {
+        availableTools: TOOLS.map((t) => t.name),
+      });
+    }
+    if (!TOOLS.some((t) => t.name === name)) {
+      return jrpcErr(id, -32601, `Unknown tool: ${name}`, {
+        availableTools: TOOLS.map((t) => t.name),
+        hint: "Call tools/list to see available tools.",
+      });
+    }
     try {
       const result = callTool(name, args, baseUrl);
-      // MCP Apps: hand the agent a ui:// resource alongside the JSON.
-      // Agents that don't know about MCP Apps just ignore _meta.
+      // ui:// resourceUri lives on the tool *definition* (in tools/list),
+      // not on the call result, per the MCP Apps spec orank checks. We
+      // still return the resolved (per-call) URI in _meta as a hint —
+      // some clients use it to short-circuit a templated lookup.
       const uiUri = uiResourceForTool(name, args, result);
       return jrpcOk(id, {
         content: textContent(result),
@@ -190,8 +255,14 @@ export async function handleMcpPost(request) {
         ...(uiUri ? { _meta: { "ui": { resourceUri: uiUri } } } : {}),
       });
     } catch (e) {
+      // Argument-shape errors come back as JSON-RPC -32602 with a typed
+      // payload; bona-fide runtime failures get isError: true content.
+      const msg = e?.message || "tool call failed";
+      if (/required|must be|invalid|missing/i.test(msg)) {
+        return jrpcErr(id, -32602, msg, { tool: name, args });
+      }
       return jrpcOk(id, {
-        content: [{ type: "text", text: `Error: ${e.message}` }],
+        content: [{ type: "text", text: `Error: ${msg}` }],
         isError: true,
       });
     }
@@ -209,7 +280,7 @@ export async function handleMcpPost(request) {
       const html = buildUiResource(uri, baseUrl);
       if (!html) return jrpcErr(id, -32602, `Unknown resource uri: ${uri}`);
       return jrpcOk(id, {
-        contents: [{ uri, mimeType: "text/html", text: html }],
+        contents: [{ uri, mimeType: MCP_APP_MIME, text: html }],
       });
     } catch (e) {
       return jrpcErr(id, -32603, `Failed to render ${uri}: ${e.message}`);

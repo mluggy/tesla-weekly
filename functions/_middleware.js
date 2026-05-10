@@ -449,6 +449,16 @@ function buildAgentJson(episode, baseUrl) {
     ...(config.update_frequency ? { updateFrequency: config.update_frequency } : {}),
     ...(topics.length ? { topics } : {}),
     ...(config.agent_recommendation ? { whenToRecommend: config.agent_recommendation } : {}),
+    pricing: { model: "free", price: 0, currency: "USD", note: config.pricing || "Free. No signup, no ads, no paywall." },
+    auth: { type: "none", required: false, note: "All endpoints are public read-only." },
+    webhooks: { supported: false, note: "Push notifications via RSS only." },
+    rateLimits: {
+      perMinute: 60,
+      scope: "per IP",
+      headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
+      docs: `${baseUrl}/api/llms.txt`,
+    },
+    agentInstructions: `${baseUrl}/AGENTS.md`,
     capabilities: [
       "browse_episodes",
       "search_transcripts",
@@ -923,6 +933,7 @@ const SITE_URL_REWRITES = new Set([
   "/index.md",
   "/episodes/llms.txt",
   "/api/llms.txt",
+  "/docs/llms.txt",
   "/.well-known/llms.txt",
   "/.well-known/agent.json",
   "/.well-known/agent-card.json",
@@ -930,6 +941,8 @@ const SITE_URL_REWRITES = new Set([
   "/.well-known/openapi.json",
   "/.well-known/agent-skills/index.json",
   "/.well-known/ai-plugin.json",
+  "/.well-known/api-catalog",
+  "/.well-known/http-message-signatures-directory",
   "/AGENTS.md",
   "/docs.md",
 ]);
@@ -942,6 +955,7 @@ const REWRITE_CONTENT_TYPES = {
   "/index.md": "text/markdown; charset=utf-8",
   "/episodes/llms.txt": "text/plain; charset=utf-8",
   "/api/llms.txt": "text/plain; charset=utf-8",
+  "/docs/llms.txt": "text/plain; charset=utf-8",
   "/.well-known/llms.txt": "text/plain; charset=utf-8",
   "/.well-known/agent.json": "application/json; charset=utf-8",
   "/.well-known/agent-card.json": "application/json; charset=utf-8",
@@ -949,6 +963,8 @@ const REWRITE_CONTENT_TYPES = {
   "/.well-known/openapi.json": "application/json; charset=utf-8",
   "/.well-known/agent-skills/index.json": "application/json; charset=utf-8",
   "/.well-known/ai-plugin.json": "application/json; charset=utf-8",
+  "/.well-known/api-catalog": 'application/linkset+json;profile="https://www.rfc-editor.org/info/rfc9727"; charset=utf-8',
+  "/.well-known/http-message-signatures-directory": "application/json; charset=utf-8",
   "/AGENTS.md": "text/markdown; charset=utf-8",
   "/docs.md": "text/markdown; charset=utf-8",
 };
@@ -960,6 +976,7 @@ const REWRITE_CACHE_CONTROL = {
   "/index.md": "public, max-age=3600, stale-while-revalidate=604800",
   "/episodes/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
   "/api/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
+  "/docs/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/agent.json": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/agent-card.json": "public, max-age=3600, stale-while-revalidate=604800",
@@ -967,6 +984,8 @@ const REWRITE_CACHE_CONTROL = {
   "/.well-known/openapi.json": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/agent-skills/index.json": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/ai-plugin.json": "public, max-age=3600, stale-while-revalidate=604800",
+  "/.well-known/api-catalog": "public, max-age=3600, stale-while-revalidate=604800",
+  "/.well-known/http-message-signatures-directory": "public, max-age=3600, stale-while-revalidate=604800",
   "/AGENTS.md": "public, max-age=3600, stale-while-revalidate=604800",
   "/docs.md": "public, max-age=3600, stale-while-revalidate=604800",
 };
@@ -1122,9 +1141,25 @@ export async function onRequest({ request, next, env }) {
   if (path === "/" || path === "") {
     if (wantsAgentMode(url)) return buildAgentJson(null, baseUrl);
     if (wantsMarkdown(request)) {
-      // Delegate to the static /index.md, rewritten for the request host.
-      const mdRequest = new Request(new URL("/index.md", request.url), request);
-      return rewriteSiteUrl(mdRequest, next);
+      // Pages routes by URL path — next() can't be re-pointed at /index.md.
+      // Fetch the static asset via env.ASSETS instead and serve it with the
+      // markdown content-type and the correct Vary/Link/cache headers.
+      if (env?.ASSETS) {
+        const mdUrl = new URL(request.url);
+        mdUrl.pathname = "/index.md";
+        const upstream = await env.ASSETS.fetch(new Request(mdUrl, request));
+        const text = (await upstream.text()).replace(/\{\{SITE_URL\}\}/g, baseUrl);
+        return new Response(text, {
+          status: upstream.status,
+          headers: {
+            "Content-Type": "text/markdown; charset=utf-8",
+            "Cache-Control": REWRITE_CACHE_CONTROL["/index.md"],
+            Vary: "Accept",
+            Link: linkHeader(baseUrl, null),
+          },
+        });
+      }
+      return redirect301("/index.md");
     }
     return renderPage(null, request);
   }

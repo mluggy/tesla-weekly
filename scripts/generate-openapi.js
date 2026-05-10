@@ -160,12 +160,12 @@ const spec = {
         responses: {
           "200": {
             description: "Array of episodes (sorted by id ascending).",
+            headers: rateLimitResponseHeaders(),
             content: {
-              "application/json": {
-                schema: { type: "array", items: { $ref: "#/components/schemas/Episode" } },
-              },
+              "application/json": { schema: { $ref: "#/components/schemas/EpisodeList" } },
             },
           },
+          ...errorResponses,
         },
       },
     },
@@ -179,41 +179,46 @@ const spec = {
         responses: {
           "200": {
             description: "Episode-id → indexed text.",
+            headers: rateLimitResponseHeaders(),
             content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  additionalProperties: { type: "string" },
-                },
-              },
+              "application/json": { schema: { $ref: "#/components/schemas/SearchIndex" } },
             },
           },
+          ...errorResponses,
         },
       },
     },
     "/rss.xml": {
       get: {
         summary: "Podcast RSS feed",
-        description: "Subscribe via any podcast app.",
+        description: "RSS 2.0 feed with iTunes/Spotify extensions. Subscribe via any podcast app.",
         operationId: "getRss",
         responses: {
           "200": {
-            description: "RSS 2.0 feed.",
-            content: { "application/rss+xml": { schema: { type: "string" } } },
+            description: "RSS 2.0 feed (XML).",
+            headers: rateLimitResponseHeaders(),
+            content: {
+              "application/rss+xml": { schema: { $ref: "#/components/schemas/RssFeed" } },
+            },
           },
+          ...errorResponses,
         },
       },
     },
     "/llms.txt": {
       get: {
         summary: "Agent briefing",
-        description: "Markdown briefing for assistant agents — what the show is, capabilities, latest episode.",
+        description: "Markdown briefing for assistant agents — show identity, capabilities, latest episode, and pointers to all other agent surfaces.",
         operationId: "getLlmsTxt",
         responses: {
           "200": {
             description: "Markdown briefing.",
-            content: { "text/plain": { schema: { type: "string" } } },
+            headers: rateLimitResponseHeaders(),
+            content: {
+              "text/plain": { schema: { $ref: "#/components/schemas/LlmsTxt" } },
+            },
           },
+          ...errorResponses,
         },
       },
     },
@@ -274,6 +279,7 @@ const spec = {
             headers: rateLimitResponseHeaders(),
             content: { "application/json": { schema: { $ref: "#/components/schemas/McpManifest" } } },
           },
+          ...errorResponses,
         },
       },
       post: {
@@ -299,14 +305,86 @@ const spec = {
         responses: {
           "200": {
             description: "Server card.",
+            headers: rateLimitResponseHeaders(),
             content: { "application/json": { schema: { $ref: "#/components/schemas/McpServerCard" } } },
           },
+          ...errorResponses,
+        },
+      },
+    },
+    "/.well-known/api-catalog": {
+      get: {
+        summary: "API catalog (RFC 9727)",
+        description: "Linkset enumerating all agent-accessible APIs and service descriptions.",
+        operationId: "getApiCatalog",
+        responses: {
+          "200": {
+            description: "Linkset of API references.",
+            headers: rateLimitResponseHeaders(),
+            content: {
+              'application/linkset+json;profile="https://www.rfc-editor.org/info/rfc9727"': {
+                schema: { $ref: "#/components/schemas/ApiCatalog" },
+              },
+            },
+          },
+          ...errorResponses,
         },
       },
     },
   },
   components: {
     schemas: {
+      EpisodeList: {
+        type: "array",
+        description: "Full episode list, sorted by id ascending.",
+        items: { $ref: "#/components/schemas/Episode" },
+      },
+      SearchIndex: {
+        type: "object",
+        description: "Episode-id (string key) → searchable text (title + description + transcript).",
+        additionalProperties: { type: "string" },
+      },
+      RssFeed: {
+        type: "string",
+        description: "RSS 2.0 feed XML body, conforming to iTunes and Spotify podcast extensions.",
+        example: '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0">…</rss>',
+      },
+      LlmsTxt: {
+        type: "string",
+        description: "Plain-text llms.txt briefing per llmstxt.org. Markdown structure with explicit sections for Agent instructions, Find <show>, About, Why, Use cases, Constraints, Topics, Capabilities, Data & APIs, Subscribe, Latest episode.",
+      },
+      ApiCatalog: {
+        type: "object",
+        description: "RFC 9727 linkset enumerating agent-accessible APIs and service descriptions.",
+        required: ["linkset"],
+        properties: {
+          linkset: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ApiCatalogItem" },
+          },
+        },
+      },
+      ApiCatalogItem: {
+        type: "object",
+        required: ["anchor"],
+        properties: {
+          anchor: { type: "string", format: "uri", description: "URI of the API or service description." },
+          "service-desc": { type: "array", items: { $ref: "#/components/schemas/ApiCatalogLink" } },
+          "service-doc": { type: "array", items: { $ref: "#/components/schemas/ApiCatalogLink" } },
+          "service-meta": { type: "array", items: { $ref: "#/components/schemas/ApiCatalogLink" } },
+          status: { type: "array", items: { $ref: "#/components/schemas/ApiCatalogLink" } },
+          related: { type: "array", items: { $ref: "#/components/schemas/ApiCatalogLink" } },
+        },
+      },
+      ApiCatalogLink: {
+        type: "object",
+        required: ["href"],
+        properties: {
+          href: { type: "string", format: "uri" },
+          type: { type: "string", description: "Media type of the linked resource." },
+          title: { type: "string" },
+        },
+      },
       Episode: {
         type: "object",
         required: ["id", "season", "title"],

@@ -84,6 +84,36 @@ New optional `podcast.yaml` fields
 ### Listener focus
 All new tool descriptions, error messages, MCP server card text, ui:// HTML cards, and API error hints use listener-language ("we don't have an episode #999, try the catalog") rather than developer jargon. The coil repo itself remains the developer-facing entry point — see [`AGENTS.md`](AGENTS.md) at the repo root.
 
+### Added (orank loose-ends — same release line)
+
+Discovery
+- **`/.well-known/api-catalog`** — RFC 9727 linkset (`application/linkset+json;profile="https://www.rfc-editor.org/info/rfc9727"`) enumerating every API and service description (search, ask, MCP, agent.json, agent-card, agent-skills, ai-plugin).
+- **`/docs/llms.txt`** — third modular section file (joins `/api/llms.txt` + `/.well-known/llms.txt`).
+- **robots.txt** — explicit TIER 0 / TIER 1 / TIER 2 section headers so scanners that look for "tier differentiation" find clearly labeled blocks.
+- **Agent-Skills `$schema`** — corrected to `https://schemas.agentskills.io/discovery/0.2.0/schema.json` (was pointing at a 404).
+
+Identity
+- **`## Agent instructions`** section promoted to the top of `llms.txt` with explicit "if you are an AI agent reading this …" copy and a numbered listener-intent → endpoint walkthrough.
+
+Auth & Access
+- **`/.well-known/http-message-signatures-directory`** (Web Bot Auth, RFC 9421) — Ed25519 JWKS published when the optional `WEB_BOT_AUTH_PRIVATE_KEY` GitHub secret is set; otherwise ships a valid empty `{ "keys": [] }` envelope. New `scripts/generate-web-bot-auth.js --new-key` CLI for one-shot keypair generation.
+
+Agent Integration
+- **`/api/[[catchall]].js`** — unknown `/api/*` paths now return a structured JSON 404 envelope instead of leaking the SPA HTML fallback.
+- **MCP Apps fixes** — `ui://` resources now serve `text/html;profile=mcp-app`, include `<!DOCTYPE html>`, `<meta name="color-scheme" content="light dark">`, `lang`/`dir` on `<html>`. `_meta.ui.resourceUri` moved from the `tools/call` *result* onto each tool *definition* (per spec); per-call resolved URI still surfaces in the result `_meta` as a hint.
+- **MCP `initialize`** — adds an `instructions` paragraph describing the read-only listener-facing scope.
+- **MCP tool annotations** — every tool carries `{ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }` so agents know they're safe to call without confirmation.
+- **MCP zero-arg tool schemas** — `get_latest_episode` and `subscribe_via_rss` now declare `properties: {}, required: [], additionalProperties: false` so they count as fully typed.
+- **MCP unknown-tool handling** — returns JSON-RPC `-32601` with `data.availableTools` + actionable hint; argument-shape errors return `-32602` with the bad payload.
+- **`Accept: text/markdown` on `/`** — fixed (was returning the SPA HTML through `next()`); now fetches `/index.md` via `env.ASSETS` and serves with `Content-Type: text/markdown; charset=utf-8` + `Vary: Accept`.
+- **OpenAPI** — every operation now references the shared error envelope (404/429/5xx). `/episodes.json`, `/search-index.json`, `/rss.xml`, `/llms.txt`, `/.well-known/mcp` GET, `/.well-known/mcp/server-card.json`, `/.well-known/api-catalog` use named `$ref` schemas (`EpisodeList`, `SearchIndex`, `RssFeed`, `LlmsTxt`, `McpManifest`, `McpServerCard`, `ApiCatalog`).
+
+User Experience
+- **Agent-mode JSON view (`?mode=agent`)** — adds `auth { type: "none", required: false }`, `webhooks { supported: false }`, `pricing` block, `rateLimits`, and `agentInstructions` URL pointing at `/AGENTS.md`. Lifts the orank signal count from 6/8 to 8/8.
+
+New optional GitHub secret
+- `WEB_BOT_AUTH_PRIVATE_KEY` — Ed25519 PEM. Optional. When set, the build emits the public key as a JWK at `/.well-known/http-message-signatures-directory`.
+
 ## 1.0.0 — 2026-04-07
 
 Initial release.

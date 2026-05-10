@@ -113,6 +113,12 @@ jobs:
       # ─── Website Build (Node.js) ───────────────────────────
 
       - name: Build website
+        env:
+          # Optional. If set, scripts/generate-web-bot-auth.js derives the
+          # public key and publishes it at /.well-known/http-message-signatures-directory.
+          # If unset, that file ships with empty keys[]. Generate a fresh key
+          # locally with `node scripts/generate-web-bot-auth.js --new-key`.
+          WEB_BOT_AUTH_PRIVATE_KEY: ${{ secrets.WEB_BOT_AUTH_PRIVATE_KEY }}
         run: npm run build
 
       # ─── Deploy ─────────────────────────────────────────────

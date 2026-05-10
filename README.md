@@ -278,6 +278,11 @@ gh secret set AWS_S3_BUCKET            -R $REPO --body "my-podcast-transcribe"
 # Optional — Gemini SRT correction
 gh secret set GEMINI_API_KEY           -R $REPO   # paste when prompted
 
+# Optional — Web Bot Auth (RFC 9421) signing key. If set, the build emits
+# the public key at /.well-known/http-message-signatures-directory.
+# Generate locally with: node scripts/generate-web-bot-auth.js --new-key
+gh secret set WEB_BOT_AUTH_PRIVATE_KEY -R $REPO   # paste the PEM when prompted
+
 # Required — variable (not a secret)
 gh variable set CLOUDFLARE_PROJECT_NAME -R $REPO --body "my-podcast"
 
@@ -307,6 +312,7 @@ Go to your fork → **Settings → Secrets and variables → Actions**.
 | `AWS_REGION` | e.g. `us-east-1` | No — transcription skipped |
 | `AWS_S3_BUCKET` | S3 staging bucket for Transcribe | No — transcription skipped |
 | `GEMINI_API_KEY` | Google AI Studio API key | No — raw SRT used as-is |
+| `WEB_BOT_AUTH_PRIVATE_KEY` | Ed25519 private key (PEM). Generate with `node scripts/generate-web-bot-auth.js --new-key`. | No — `/.well-known/http-message-signatures-directory` ships with empty `keys[]` |
 
 **Variables tab** — click "New repository variable":
 

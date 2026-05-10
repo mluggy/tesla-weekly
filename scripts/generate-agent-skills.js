@@ -170,7 +170,7 @@ for (const skill of skills) {
 }
 
 const index = {
-  $schema: "https://agentskills.io/schemas/v0.2.0/index.json",
+  $schema: "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
   version: "0.2.0",
   name: config.title,
   description: `Listener-facing Agent Skills for ${config.title}`,

@@ -380,3 +380,65 @@ writeFileSync(
   JSON.stringify(aiPlugin, null, 2) + "\n"
 );
 console.log("Generated public/.well-known/ai-plugin.json");
+
+// ─── /.well-known/api-catalog (RFC 9727) ──────────────────────────────────
+// Linkset enumerating agent-accessible APIs and their service descriptions.
+// Served with Content-Type: application/linkset+json;profile="..." (the
+// middleware sets the right header from REWRITE_CONTENT_TYPES).
+const apiCatalog = {
+  linkset: [
+    {
+      anchor: `${SITE}/api/search`,
+      "service-desc": [
+        { href: `${SITE}/.well-known/openapi.json`, type: "application/json", title: "OpenAPI 3.1 spec" },
+      ],
+      "service-doc": [
+        { href: `${SITE}/api/llms.txt`, type: "text/plain", title: "API briefing for AI agents" },
+        { href: `${SITE}/docs.md`, type: "text/markdown", title: "Listener-agent docs" },
+      ],
+      status: [{ href: `${SITE}/status`, type: "application/json", title: "Service health" }],
+    },
+    {
+      anchor: `${SITE}/ask`,
+      "service-desc": [
+        { href: `${SITE}/.well-known/openapi.json`, type: "application/json", title: "OpenAPI 3.1 spec (POST /ask)" },
+      ],
+      "service-doc": [
+        { href: `${SITE}/api/llms.txt`, type: "text/plain", title: "NLWeb /ask usage" },
+      ],
+      related: [
+        { href: "https://github.com/microsoft/NLWeb", type: "text/html", title: "NLWeb spec (Microsoft)" },
+      ],
+    },
+    {
+      anchor: `${SITE}/mcp`,
+      "service-desc": [
+        { href: `${SITE}/.well-known/mcp/server-card.json`, type: "application/json", title: "MCP server card" },
+        { href: `${SITE}/.well-known/openapi.json`, type: "application/json", title: "OpenAPI 3.1 spec (POST /mcp)" },
+      ],
+      "service-meta": [
+        { href: `${SITE}/.well-known/mcp`, type: "application/json", title: "MCP discovery manifest" },
+      ],
+      related: [
+        { href: "https://modelcontextprotocol.io", type: "text/html", title: "Model Context Protocol" },
+      ],
+    },
+    {
+      anchor: `${SITE}/.well-known/agent.json`,
+      "service-desc": [
+        { href: `${SITE}/.well-known/agent.json`, type: "application/json", title: "Agent capability declaration" },
+      ],
+      related: [
+        { href: `${SITE}/.well-known/agent-card.json`, type: "application/json", title: "A2A agent card" },
+        { href: `${SITE}/.well-known/agent-skills/index.json`, type: "application/json", title: "Agent Skills index (v0.2.0)" },
+        { href: `${SITE}/.well-known/ai-plugin.json`, type: "application/json", title: "OpenAI plugin manifest" },
+      ],
+    },
+  ],
+};
+
+writeFileSync(
+  "public/.well-known/api-catalog",
+  JSON.stringify(apiCatalog, null, 2) + "\n"
+);
+console.log("Generated public/.well-known/api-catalog");

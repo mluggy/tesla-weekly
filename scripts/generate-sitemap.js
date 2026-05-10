@@ -51,7 +51,12 @@ const trainSignal = allowTraining ? "yes" : "no";
 // in some scanners' interpretation, and they make our intent unambiguous.
 const runtimeAllowBlocks = [
   "",
-  "# Runtime browse-on-behalf bots — always allowed (search/answer engines).",
+  "# ============================================================",
+  "# TIER 1 — Runtime browse-on-behalf agents",
+  "# ============================================================",
+  "# Search/answer engines that fetch on behalf of a user asking",
+  "# a question right now. Always Allowed regardless of ai_training.",
+  "",
   "User-agent: ChatGPT-User",
   "Allow: /",
   "",
@@ -95,7 +100,12 @@ const runtimeAllowBlocks = [
 const trainingBlocks = allowTraining
   ? [
       "",
-      "# Training crawlers — explicitly allowed (ai_training: true).",
+      "# ============================================================",
+      "# TIER 2 — Training crawlers (allowed: ai_training: true)",
+      "# ============================================================",
+      "# Crawlers that ingest content for model training. Allowed",
+      "# because the show opted in via ai_training: true in podcast.yaml.",
+      "",
       "User-agent: GPTBot",
       "Allow: /",
       "",
@@ -125,7 +135,13 @@ const trainingBlocks = allowTraining
     ].join("\n")
   : [
       "",
-      "# Opt-out: training crawlers (set ai_training: true in podcast.yaml to allow).",
+      "# ============================================================",
+      "# TIER 2 — Training crawlers (blocked: ai_training: false)",
+      "# ============================================================",
+      "# Crawlers that ingest content for model training. Blocked",
+      "# because the show opted out — set ai_training: true in",
+      "# podcast.yaml to allow.",
+      "",
       "User-agent: GPTBot",
       "Disallow: /",
       "",
@@ -149,6 +165,12 @@ const trainingBlocks = allowTraining
     ].join("\n");
 
 const robots = [
+  "# ============================================================",
+  "# TIER 0 — Default policy (search engines, generic crawlers)",
+  "# ============================================================",
+  "# Search engines and ordinary crawlers may fetch any page. AI-tier",
+  "# preferences are expressed via Content-Signal (Cloudflare's",
+  "# proposal) and per-bot Tier 1 / Tier 2 blocks below.",
   "User-agent: *",
   `Content-Signal: search=yes, ai-input=yes, ai-train=${trainSignal}`,
   "Allow: /",
