@@ -313,7 +313,7 @@ export default function App() {
         style={{
           flex: 1,
           padding: "8px 10px",
-          paddingBottom: player.playing ? (player.showSubs ? 200 : 140) : 40,
+          paddingBottom: player.playing ? (player.showSubs && player.playingEp?.hasSrt ? 200 : 140) : 40,
         }}
       >
         <div style={{ maxWidth: 880, margin: "0 auto" }}>

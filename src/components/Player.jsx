@@ -64,8 +64,8 @@ export default function Player({ player, onPrevEpisode, onNextEpisode, hasPrev, 
         borderTop: "1px solid var(--border)",
       }}
     >
-      {/* Subtitle row — always visible when CC is on */}
-      {showSubs && (
+      {/* Subtitle row — visible only when CC is on AND the episode has an SRT */}
+      {showSubs && playingEp?.hasSrt && (
         <div
           style={{
             borderBottom: "1px solid var(--border)",
@@ -140,6 +140,9 @@ export default function Player({ player, onPrevEpisode, onNextEpisode, hasPrev, 
           maxWidth: 880,
           margin: "0 auto",
           padding: "6px 10px 10px",
+          // Match EpisodeRow's effective start inset (margin -3 + padding 7 = 4)
+          // so the play button vertically aligns with the row play buttons.
+          paddingInlineStart: 4,
           display: "flex",
           alignItems: "center",
           gap: 6,
