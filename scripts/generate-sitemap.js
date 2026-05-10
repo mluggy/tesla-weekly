@@ -32,14 +32,97 @@ writeFileSync("public/sitemap.xml", xml);
 console.log(`Generated sitemap.xml with ${urls.length} URLs`);
 
 // Generate robots.txt with Content-Signal hints + Schemamap pointer.
-// Live agent crawl (ChatGPT-User, OAI-SearchBot, PerplexityBot, ClaudeBot
-// search) is always allowed so the show stays discoverable in answer
-// engines. Training crawl (GPTBot, CCBot, Anthropic-AI for training,
-// Bytespider, ClaudeBot training) is gated on `ai_training` in podcast.yaml.
+//
+// Two distinct bot tiers, handled separately:
+//
+// 1. Runtime browse-on-behalf bots (ChatGPT-User, OAI-SearchBot,
+//    PerplexityBot, Claude-User, Applebot, Google-Extended runtime, etc.)
+//    — these fetch on behalf of a user asking a question right now. Always
+//    explicitly Allowed so the show stays discoverable in answer engines.
+//
+// 2. Training crawlers (GPTBot, CCBot, anthropic-ai, ClaudeBot, Bytespider,
+//    Google-Extended for training, Applebot-Extended) — gated on
+//    `ai_training` in podcast.yaml. Set true to opt in (recommended for
+//    maximum agent-readiness scoring).
 const allowTraining = config.ai_training === true;
 const trainSignal = allowTraining ? "yes" : "no";
+
+// Always-Allow runtime bots. Explicit Allow blocks beat any default-* deny
+// in some scanners' interpretation, and they make our intent unambiguous.
+const runtimeAllowBlocks = [
+  "",
+  "# Runtime browse-on-behalf bots — always allowed (search/answer engines).",
+  "User-agent: ChatGPT-User",
+  "Allow: /",
+  "",
+  "User-agent: OAI-SearchBot",
+  "Allow: /",
+  "",
+  "User-agent: PerplexityBot",
+  "Allow: /",
+  "",
+  "User-agent: Perplexity-User",
+  "Allow: /",
+  "",
+  "User-agent: Claude-User",
+  "Allow: /",
+  "",
+  "User-agent: Claude-SearchBot",
+  "Allow: /",
+  "",
+  "User-agent: Applebot",
+  "Allow: /",
+  "",
+  "User-agent: Googlebot",
+  "Allow: /",
+  "",
+  "User-agent: Google-CloudVertexBot",
+  "Allow: /",
+  "",
+  "User-agent: DuckAssistBot",
+  "Allow: /",
+  "",
+  "User-agent: Amazonbot",
+  "Allow: /",
+  "",
+  "User-agent: MistralAI-User",
+  "Allow: /",
+  "",
+  "User-agent: Cohere-AI",
+  "Allow: /",
+].join("\n");
+
 const trainingBlocks = allowTraining
-  ? ""
+  ? [
+      "",
+      "# Training crawlers — explicitly allowed (ai_training: true).",
+      "User-agent: GPTBot",
+      "Allow: /",
+      "",
+      "User-agent: CCBot",
+      "Allow: /",
+      "",
+      "User-agent: anthropic-ai",
+      "Allow: /",
+      "",
+      "User-agent: ClaudeBot",
+      "Allow: /",
+      "",
+      "User-agent: Bytespider",
+      "Allow: /",
+      "",
+      "User-agent: Google-Extended",
+      "Allow: /",
+      "",
+      "User-agent: Applebot-Extended",
+      "Allow: /",
+      "",
+      "User-agent: FacebookBot",
+      "Allow: /",
+      "",
+      "User-agent: Meta-ExternalAgent",
+      "Allow: /",
+    ].join("\n")
   : [
       "",
       "# Opt-out: training crawlers (set ai_training: true in podcast.yaml to allow).",
@@ -50,6 +133,9 @@ const trainingBlocks = allowTraining
       "Disallow: /",
       "",
       "User-agent: anthropic-ai",
+      "Disallow: /",
+      "",
+      "User-agent: ClaudeBot",
       "Disallow: /",
       "",
       "User-agent: Bytespider",
@@ -66,6 +152,7 @@ const robots = [
   "User-agent: *",
   `Content-Signal: search=yes, ai-input=yes, ai-train=${trainSignal}`,
   "Allow: /",
+  runtimeAllowBlocks,
   trainingBlocks,
   "",
   `Sitemap: ${SITE}/sitemap.xml`,

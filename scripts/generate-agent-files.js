@@ -45,15 +45,42 @@ const agentJson = {
   ],
   endpoints: {
     search: `${SITE}/api/search?q={query}`,
+    ask: `${SITE}/ask`,
+    askGet: `${SITE}/ask?q={query}`,
+    status: `${SITE}/status`,
     mcp: `${SITE}/mcp`,
+    mcpDiscovery: [
+      `${SITE}/.well-known/mcp`,
+      `${SITE}/.well-known/mcp.json`,
+      `${SITE}/.well-known/mcp-configuration`,
+      `${SITE}/.well-known/mcp/server.json`,
+    ],
+    mcpServerCard: `${SITE}/.well-known/mcp/server-card.json`,
     openapi: `${SITE}/.well-known/openapi.json`,
+    agentCard: `${SITE}/.well-known/agent-card.json`,
+    agentSkillsIndex: `${SITE}/.well-known/agent-skills/index.json`,
+    schemaMap: `${SITE}/.well-known/schema-map.xml`,
     rss: `${SITE}/rss.xml`,
     episodes: `${SITE}/episodes.json`,
     searchIndex: `${SITE}/search-index.json`,
     sitemap: `${SITE}/sitemap.xml`,
     llms: `${SITE}/llms.txt`,
     episodesLlms: `${SITE}/episodes/llms.txt`,
+    apiLlms: `${SITE}/api/llms.txt`,
+    wellKnownLlms: `${SITE}/.well-known/llms.txt`,
     indexMarkdown: `${SITE}/index.md`,
+    agentMode: `${SITE}/?mode=agent`,
+    agents: `${SITE}/AGENTS.md`,
+  },
+  rateLimits: {
+    perMinute: 60,
+    scope: "per IP",
+    headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
+    docs: `${SITE}/api/llms.txt`,
+  },
+  errorEnvelope: {
+    schema: "{ error: { code, message, hint, docs_url } }",
+    statusCodes: [400, 404, 405, 429, 500],
   },
   ...(latest
     ? {
@@ -144,8 +171,15 @@ const schemaMap = `<?xml version="1.0" encoding="UTF-8"?>
   <feed url="${SITE}/episodes.json" type="application/json" />
   <feed url="${SITE}/search-index.json" type="application/json" />
   <feed url="${SITE}/llms.txt" type="text/plain" />
+  <feed url="${SITE}/episodes/llms.txt" type="text/plain" />
+  <feed url="${SITE}/api/llms.txt" type="text/plain" />
+  <feed url="${SITE}/.well-known/llms.txt" type="text/plain" />
+  <feed url="${SITE}/index.md" type="text/markdown" />
   <feed url="${SITE}/.well-known/agent.json" type="application/json" />
+  <feed url="${SITE}/.well-known/agent-card.json" type="application/json" />
+  <feed url="${SITE}/.well-known/agent-skills/index.json" type="application/json" />
   <feed url="${SITE}/.well-known/openapi.json" type="application/json" />
+  <feed url="${SITE}/.well-known/mcp" type="application/json" />
   <feed url="${SITE}/mcp" type="application/json" />
 </schemamap>
 `;
@@ -227,3 +261,122 @@ md.push("");
 
 writeFileSync("public/index.md", md.join("\n"));
 console.log("Generated public/index.md");
+
+// ─── /AGENTS.md ───────────────────────────────────────────────────────────
+// Listener-agent contributor doc. Tells AI agents (browse-on-behalf,
+// search/answer engines, native MCP clients) what surfaces this deployment
+// exposes and the lowest-cost path to each capability.
+const agents = [];
+agents.push(`# AGENTS.md — ${config.title}`);
+agents.push("");
+agents.push(`> Agent integration guide for ${config.title}. This is **not** a developer doc for the underlying coil platform — it's a runtime guide for AI agents (browse-on-behalf, search/answer engines, native MCP clients) helping a human listener consume this podcast.`);
+agents.push("");
+if (config.agent_recommendation) {
+  agents.push("## When to recommend");
+  agents.push(config.agent_recommendation);
+  agents.push("");
+}
+agents.push("## Cheapest path per capability");
+agents.push("");
+agents.push("| Listener intent | Endpoint |");
+agents.push("|---|---|");
+agents.push(`| \"What's the latest episode?\" | \`GET ${SITE}/?mode=agent\` (returns \`latestEpisode\`) |`);
+agents.push(`| \"Find the episode about <X>\" | \`GET ${SITE}/api/search?q=<X>\` |`);
+agents.push(`| \"Ask the show a question\" | \`POST ${SITE}/ask\` (NLWeb; SSE via \`Accept: text/event-stream\`) |`);
+agents.push(`| \"Subscribe me\" | RSS: ${SITE}/rss.xml |`);
+agents.push(`| \"Read the transcript of episode N\" | \`GET ${SITE}/<N>.md\` (markdown) or \`GET ${SITE}/sNNeMM.txt\` (raw) |`);
+agents.push(`| \"Browse the catalog\" | \`GET ${SITE}/episodes.json\` or \`GET ${SITE}/episodes/llms.txt\` |`);
+agents.push(`| Health check / circuit-breaker | \`GET ${SITE}/status\` |`);
+agents.push(`| Native MCP tool calls | \`POST ${SITE}/mcp\` (Streamable HTTP, JSON-RPC 2.0) |`);
+agents.push(`| MCP server preview before connect | \`GET ${SITE}/.well-known/mcp/server-card.json\` |`);
+agents.push("");
+agents.push("## Rate limits");
+agents.push("");
+agents.push(`- **60 req/min/IP** across all API endpoints. Self-throttle on \`X-RateLimit-Remaining\` / \`Retry-After\`.`);
+agents.push(`- All API responses include \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\`, \`X-RateLimit-Reset\` (Unix seconds).`);
+agents.push("");
+agents.push("## Errors");
+agents.push("");
+agents.push("Structured JSON envelope: `{ error: { code, message, hint, docs_url } }`.");
+agents.push("Status codes used: **400** (bad query/body), **404** (no such episode), **405** (wrong method), **429** (rate-limited), **500** (server side).");
+agents.push(`Episode-not-found via \`?mode=agent\` or \`Accept: application/json\` returns a real 404 + JSON envelope (browsers still get a 301 to home).`);
+agents.push("");
+agents.push("## Discovery surfaces");
+agents.push("");
+agents.push(`- **llms.txt:** [/llms.txt](${SITE}/llms.txt), [/episodes/llms.txt](${SITE}/episodes/llms.txt), [/api/llms.txt](${SITE}/api/llms.txt), [/.well-known/llms.txt](${SITE}/.well-known/llms.txt)`);
+agents.push(`- **agent.json:** [/.well-known/agent.json](${SITE}/.well-known/agent.json) — capability declaration + endpoint inventory`);
+agents.push(`- **agent-card.json:** [/.well-known/agent-card.json](${SITE}/.well-known/agent-card.json) — A2A-style skill card`);
+agents.push(`- **agent-skills:** [/.well-known/agent-skills/index.json](${SITE}/.well-known/agent-skills/index.json) — agentskills.io v0.2.0 (SKILL.md artifacts with sha256)`);
+agents.push(`- **MCP discovery (all return the same manifest):** [/.well-known/mcp](${SITE}/.well-known/mcp), [/.well-known/mcp.json](${SITE}/.well-known/mcp.json), [/.well-known/mcp-configuration](${SITE}/.well-known/mcp-configuration), [/.well-known/mcp/server.json](${SITE}/.well-known/mcp/server.json)`);
+agents.push(`- **OpenAPI 3.1:** [/.well-known/openapi.json](${SITE}/.well-known/openapi.json)`);
+agents.push(`- **Schema map (NLWeb):** [/.well-known/schema-map.xml](${SITE}/.well-known/schema-map.xml)`);
+agents.push(`- **Sitemap:** [/sitemap.xml](${SITE}/sitemap.xml)`);
+agents.push(`- **HTTP Link headers (RFC 8288):** every HTML response advertises sitemap, markdown alternates, OpenAPI, agent.json, agent-card, agent-skills, MCP, RSS, and llms.txt.`);
+agents.push("");
+agents.push("## Modes & negotiation");
+agents.push("");
+agents.push(`- \`?mode=agent\` on \`/\` or \`/<id>\` → compact JSON envelope`);
+agents.push(`- \`/<id>.md\` or \`Accept: text/markdown\` → markdown view of episode (or homepage)`);
+agents.push(`- \`Accept: application/json\` is **not** required — the JSON forms are URL-addressable`);
+agents.push("");
+agents.push("## Crawl policy");
+agents.push("");
+agents.push(`Runtime browse-on-behalf bots (ChatGPT-User, OAI-SearchBot, PerplexityBot, Claude-User, Applebot, etc.) are **always allowed**, regardless of the show's training-opt-in setting. Training crawlers are gated on \`ai_training\` in the show config — see \`/robots.txt\` for the live policy.`);
+agents.push("");
+agents.push("## Identity");
+agents.push("");
+if (config.author) agents.push(`- Host: ${config.author}`);
+if (config.language) agents.push(`- Language: ${config.language}`);
+if (config.update_frequency) agents.push(`- Cadence: ${config.update_frequency}`);
+agents.push(`- Site: ${SITE}`);
+agents.push("");
+agents.push("## Things not to do");
+agents.push("");
+agents.push("- Don't scrape rendered HTML when a structured endpoint exists. Every piece of metadata is one fetch away in JSON or markdown.");
+agents.push("- Don't fetch the SPA bundle to extract content — `/index.md` and `/<id>.md` are both faster and stable.");
+agents.push("- Don't paginate `/api/search` past `limit=50` — that's the hard cap.");
+agents.push("");
+writeFileSync("public/AGENTS.md", agents.join("\n"));
+console.log("Generated public/AGENTS.md");
+
+// ─── /.well-known/ai-plugin.json ──────────────────────────────────────────
+// OpenAI plugin manifest. Listener-facing copy: this exposes the show as
+// a custom GPT / OpenAI plugin so listeners can ask their assistant about
+// it without hand-wiring an integration.
+const aiPlugin = {
+  schema_version: "v1",
+  name_for_human: config.title,
+  name_for_model: (config.title || "podcast")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50),
+  description_for_human:
+    config.description ||
+    `Search, browse, and listen to ${config.title} episodes.`,
+  description_for_model:
+    `Use this plugin when the user asks about ${config.title}, its episodes, ` +
+    `topics, host, or transcripts. Capabilities: ranked full-text search ` +
+    `(GET /api/search), natural-language ask (POST /ask, supports SSE), ` +
+    `latest-episode lookup, full episode list, single episode by id, full ` +
+    `transcript text, RSS subscription URL. ` +
+    (config.agent_recommendation ? `${config.agent_recommendation} ` : "") +
+    `Show language: ${config.language || "see /llms.txt"}. ` +
+    `For native MCP clients use ${SITE}/mcp instead of HTTP.`,
+  auth: { type: "none" },
+  api: {
+    type: "openapi",
+    url: `${SITE}/.well-known/openapi.json`,
+    is_user_authenticated: false,
+  },
+  logo_url: `${SITE}${config.cover || "/cover.png"}`,
+  ...(config.owner_email ? { contact_email: config.owner_email } : {}),
+  legal_info_url: `${SITE}/llms.txt`,
+};
+
+mkdirSync("public/.well-known", { recursive: true });
+writeFileSync(
+  "public/.well-known/ai-plugin.json",
+  JSON.stringify(aiPlugin, null, 2) + "\n"
+);
+console.log("Generated public/.well-known/ai-plugin.json");

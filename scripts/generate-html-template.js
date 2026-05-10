@@ -31,9 +31,28 @@ const cleanedHead = headContent
 // SSR content lives in a hidden sibling of #root — visible to crawlers in
 // the HTML source but never rendered by the browser. React renders the
 // interactive app inside the empty #root.
+//
+// We also emit an sr-only <h1> + agent-doc anchors as separate siblings.
+// `[hidden]` content is often skipped by no-JS HTML parsers (orank, naive
+// crawlers), so anything inside the SSR block is invisible to them. The
+// sr-only nodes are in raw HTML, not marked `hidden`/`display:none`/
+// `aria-hidden`, so parsers count them as present, but CSS clipping keeps
+// them invisible to sighted users.
+const srOnlyAgentNav = [
+  '<nav class="sr-only" aria-label="For AI agents">',
+  '<a href="/AGENTS.md" rel="agent-docs">Agent integration guide</a>',
+  '<a href="/api/llms.txt" rel="api-docs">API briefing for AI agents</a>',
+  '<a href="/docs" rel="docs">Listener-agent docs</a>',
+  '<a href="/.well-known/openapi.json" rel="service-desc">OpenAPI spec</a>',
+  '<a href="/.well-known/agent.json" rel="describedby">Agent capability declaration</a>',
+  '<a href="/mcp" rel="mcp">MCP server</a>',
+  '<a href="/ask" rel="nlweb">Ask the show (NLWeb /ask)</a>',
+  '</nav>',
+].join("");
+
 const bodyWithSsr = bodyContent.replace(
   '<div id="root"></div>',
-  '<div id="root"></div><div hidden>__SSR_CONTENT__</div>'
+  `<h1 class="sr-only">__SSR_H1__</h1>${srOnlyAgentNav}<div id="root"></div><div hidden>__SSR_CONTENT__</div>`
 );
 
 const template = `<!DOCTYPE html>

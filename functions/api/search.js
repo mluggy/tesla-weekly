@@ -3,42 +3,43 @@
 // Use this from agents that don't want to download search-index.json.
 
 import { searchEpisodes } from "../_search.js";
+import { apiOk, apiError, corsPreflight, errors } from "../_api.js";
 
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
-  const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit") || "10", 10)));
-
-  if (!q) {
-    return Response.json(
-      { error: "missing required query parameter: q" },
-      { status: 400, headers: { "Access-Control-Allow-Origin": "*" } }
-    );
+  const limitParam = url.searchParams.get("limit");
+  const parsedLimit = limitParam == null ? 10 : parseInt(limitParam, 10);
+  if (limitParam != null && !Number.isFinite(parsedLimit)) {
+    return apiError({
+      status: 400,
+      code: "bad_limit",
+      message: "`limit` must be an integer between 1 and 50.",
+      hint: "/api/search?q=ai&limit=10",
+    });
   }
+  const limit = Math.min(50, Math.max(1, parsedLimit || 10));
 
-  const t0 = Date.now();
-  const baseUrl = `${url.protocol}//${url.host}`;
-  const results = searchEpisodes(q, { limit, baseUrl });
-  const took_ms = Date.now() - t0;
+  if (!q) return errors.missingQuery();
 
-  return Response.json(
-    { query: q, count: results.length, took_ms, results },
-    {
-      headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=600",
-        "Access-Control-Allow-Origin": "*",
-      },
-    }
-  );
+  try {
+    const t0 = Date.now();
+    const baseUrl = `${url.protocol}//${url.host}`;
+    const results = searchEpisodes(q, { limit, baseUrl });
+    const took_ms = Date.now() - t0;
+
+    return apiOk({ query: q, count: results.length, took_ms, results });
+  } catch (e) {
+    return errors.internal(e?.message);
+  }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Max-Age": "86400",
-    },
-  });
-}
+// Reject other methods with structured 405s — agents need a clean signal,
+// not the implicit "GET only" that file-route conventions imply.
+const reject = () => errors.methodNotAllowed("GET");
+export const onRequestPost = reject;
+export const onRequestPut = reject;
+export const onRequestDelete = reject;
+export const onRequestPatch = reject;
+
+export const onRequestOptions = corsPreflight;

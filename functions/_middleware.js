@@ -1,6 +1,8 @@
 import template from "./_html-template.js";
 import episodes from "./_episodes.js";
 import config from "./_config.js";
+import { apiHeaders, errors } from "./_api.js";
+import { handleMcpPost, buildMcpGetManifest, TOOLS as MCP_TOOLS, SERVER_INFO as MCP_SERVER_INFO, PROTOCOL_VERSION as MCP_PROTOCOL_VERSION } from "./mcp.js";
 
 const BOTS = /googlebot|google-inspectiontool|bingbot|yandex|baiduspider|twitterbot|facebookexternalhit|linkedinbot|slackbot-linkexpanding|discordbot|whatsapp|telegrambot|applebot|pinterestbot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|bytespider|gptbot|chatgpt-user|oai-searchbot|anthropic-ai|claudebot|ccbot/i;
 
@@ -102,7 +104,11 @@ function esc(s) {
 }
 
 function buildJsonLd(episode, baseUrl) {
-  const sameAs = [
+  // Authority links for the show itself. Spotify/Apple/Amazon/YouTube
+  // are settable in podcast.yaml and act as podcast-directory authority
+  // profiles. Wikipedia/Wikidata/GitHub are added when the host wires
+  // them up.
+  const showSameAs = [
     config.spotify_url,
     config.apple_podcasts_url,
     config.youtube_url,
@@ -112,14 +118,26 @@ function buildJsonLd(episode, baseUrl) {
     config.instagram_url,
     config.tiktok_url,
     config.linkedin_url,
+    config.wikipedia_url,
+    config.github_url,
   ].filter(Boolean);
+  const showWikidataId = config.wikidata_id;
+  if (showWikidataId) showSameAs.push(`https://www.wikidata.org/wiki/${showWikidataId}`);
 
   const cover = `${baseUrl}${config.cover || "/cover.png"}`;
   const topics = Array.isArray(config.topics) ? config.topics.filter(Boolean) : [];
 
   // Person block for the host. Used on both homepage (top-level) and as
   // `author` on episodes. Includes optional `host:` block from podcast.yaml.
-  const personSameAs = [config.x_url, config.linkedin_url, config.facebook_url, config.instagram_url, config.tiktok_url].filter(Boolean);
+  const personSameAs = [
+    config.x_url,
+    config.linkedin_url,
+    config.facebook_url,
+    config.instagram_url,
+    config.tiktok_url,
+    config.host?.github_url,
+    config.host?.wikipedia_url,
+  ].filter(Boolean);
   const wikidataId = config.host?.wikidata_id;
   if (wikidataId) personSameAs.unshift(`https://www.wikidata.org/wiki/${wikidataId}`);
   const person = {
@@ -130,6 +148,9 @@ function buildJsonLd(episode, baseUrl) {
     ...(config.host?.bio ? { description: config.host.bio } : {}),
     ...(personSameAs.length ? { sameAs: personSameAs } : {}),
   };
+
+  // Use show-level sameAs for the series block (back-compat name).
+  const sameAs = showSameAs;
 
   if (!episode) {
     // Homepage: emit a graph of PodcastSeries + WebSite (with SearchAction)
@@ -171,9 +192,114 @@ function buildJsonLd(episode, baseUrl) {
       },
     };
 
+    // The podcast as a `Product`. Listener-friendly framing: the show is
+    // the offering; the audience can "acquire" it for free. Helps generic
+    // entity-type checks (orank, etc.) recognize the offering even though
+    // PodcastSeries is the schema.org-correct primary type.
+    const product = {
+      "@type": "Product",
+      "@id": `${baseUrl}/#product`,
+      name: config.title,
+      description: config.description,
+      url: baseUrl,
+      image: cover,
+      category: "Podcast",
+      brand: { "@id": `${baseUrl}/#podcast` },
+      ...(sameAs.length ? { sameAs } : {}),
+      ...(topics.length ? { keywords: topics.join(", ") } : {}),
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        url: baseUrl,
+        category: "Free",
+      },
+    };
+
+    // Publisher organisation. Defaults to the host's name if no separate
+    // publisher is configured. `@id` distinct from the Person so agents
+    // can disambiguate "the show's publisher" from "the show's host".
+    const organization = {
+      "@type": "Organization",
+      "@id": `${baseUrl}/#publisher`,
+      name: config.publisher || config.author,
+      url: baseUrl,
+      logo: cover,
+      ...(sameAs.length ? { sameAs } : {}),
+    };
+
+    // FAQ schema — surfaces high-intent listener questions for answer
+    // engines. Mostly static, with a few config-driven fields.
+    const platformList = [
+      ["Spotify", config.spotify_url],
+      ["Apple Podcasts", config.apple_podcasts_url],
+      ["YouTube", config.youtube_url],
+      ["Amazon Music", config.amazon_music_url],
+    ].filter(([, u]) => u);
+    const platformsAnswer = platformList.length
+      ? "Subscribe via " +
+        platformList.map(([n, u]) => `${n} (${u})`).join(", ") +
+        `, or add ${baseUrl}/rss.xml to any podcast app.`
+      : `Add ${baseUrl}/rss.xml to any podcast app.`;
+    const faq = {
+      "@type": "FAQPage",
+      "@id": `${baseUrl}/#faq`,
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: `How do I subscribe to ${config.title}?`,
+          acceptedAnswer: { "@type": "Answer", text: platformsAnswer },
+        },
+        {
+          "@type": "Question",
+          name: `Is ${config.title} free?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: config.pricing
+              ? config.pricing
+              : "Yes. Free, no signup, no ads, no paywall.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: `What language is ${config.title} in?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: `Episodes are in ${config.language || "the show's language"}. Full transcripts are available alongside every episode.`,
+          },
+        },
+        ...(config.update_frequency
+          ? [
+              {
+                "@type": "Question",
+                name: `How often does ${config.title} publish?`,
+                acceptedAnswer: { "@type": "Answer", text: `New episodes ${config.update_frequency}.` },
+              },
+            ]
+          : []),
+        {
+          "@type": "Question",
+          name: `Can my AI agent use ${config.title}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: `Yes. The site exposes a Streamable HTTP MCP server at ${baseUrl}/mcp, a search API at ${baseUrl}/api/search, an NLWeb /ask endpoint at ${baseUrl}/ask, and discovery files under /.well-known/. See ${baseUrl}/AGENTS.md for the integration guide.`,
+          },
+        },
+        {
+          "@type": "Question",
+          name: `Where can I read transcripts of ${config.title}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: `Every episode has a full transcript. Open any episode at ${baseUrl}/<id> or fetch the markdown at ${baseUrl}/<id>.md.`,
+          },
+        },
+      ],
+    };
+
     return {
       "@context": "https://schema.org",
-      "@graph": [series, website, person],
+      "@graph": [series, product, organization, website, person, faq],
     };
   }
 
@@ -181,8 +307,8 @@ function buildJsonLd(episode, baseUrl) {
   const epGuests = Array.isArray(episode.guests) ? episode.guests : [];
 
   const ld = {
-    "@context": "https://schema.org",
     "@type": "PodcastEpisode",
+    "@id": `${baseUrl}/${episode.id}#episode`,
     name: episode.title,
     description: episode.desc || "",
     url: `${baseUrl}/${episode.id}`,
@@ -268,7 +394,291 @@ function buildJsonLd(episode, baseUrl) {
       .filter(Boolean);
   }
 
-  return ld;
+  // Episode pages return a @graph: PodcastEpisode + BreadcrumbList. The
+  // breadcrumb gives navigation context the homepage doesn't need.
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${baseUrl}/${episode.id}#breadcrumb`,
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: config.title, item: baseUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: episode.title,
+        item: `${baseUrl}/${episode.id}`,
+      },
+    ],
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [ld, breadcrumb],
+  };
+}
+
+// ─── Agent-mode JSON view ─────────────────────────────────────────────────
+// Compact response served for `?mode=agent`. Pure capability + endpoint
+// inventory; agents drill into the inventory for richer data instead of
+// us inlining episode lists here.
+function buildAgentJson(episode, baseUrl) {
+  const topics = Array.isArray(config.topics) ? config.topics.filter(Boolean) : [];
+  const sortedDesc = [...episodes].sort((a, b) => b.id - a.id);
+  const latest = sortedDesc[0];
+
+  const epView = (ep) => ({
+    id: ep.id,
+    title: ep.title,
+    url: `${baseUrl}/${ep.id}`,
+    markdownUrl: `${baseUrl}/${ep.id}.md`,
+    audioUrl: `${baseUrl}/${ep.audioFile}`,
+    transcriptUrl: ep.audioFile ? `${baseUrl}/${ep.audioFile.replace(".mp3", ".txt")}` : undefined,
+    datePublished: ep.date || undefined,
+    duration: ep.duration || undefined,
+    description: ep.desc || undefined,
+  });
+
+  const payload = {
+    mode: "agent",
+    schemaVersion: "1.0",
+    name: config.title,
+    description: config.description || "",
+    url: baseUrl,
+    contentType: "podcast",
+    ...(config.author ? { author: config.author } : {}),
+    ...(config.language ? { language: config.language } : {}),
+    ...(config.update_frequency ? { updateFrequency: config.update_frequency } : {}),
+    ...(topics.length ? { topics } : {}),
+    ...(config.agent_recommendation ? { whenToRecommend: config.agent_recommendation } : {}),
+    capabilities: [
+      "browse_episodes",
+      "search_transcripts",
+      "get_latest_episode",
+      "get_episode_by_topic",
+      "subscribe_via_rss",
+      "read_transcripts",
+    ],
+    endpoints: {
+      search: `${baseUrl}/api/search?q={query}`,
+      mcp: `${baseUrl}/mcp`,
+      mcpDiscovery: [
+        `${baseUrl}/.well-known/mcp`,
+        `${baseUrl}/.well-known/mcp.json`,
+        `${baseUrl}/.well-known/mcp-configuration`,
+        `${baseUrl}/.well-known/mcp/server.json`,
+      ],
+      openapi: `${baseUrl}/.well-known/openapi.json`,
+      agentJson: `${baseUrl}/.well-known/agent.json`,
+      agentCard: `${baseUrl}/.well-known/agent-card.json`,
+      agentSkillsIndex: `${baseUrl}/.well-known/agent-skills/index.json`,
+      schemaMap: `${baseUrl}/.well-known/schema-map.xml`,
+      rss: `${baseUrl}/rss.xml`,
+      sitemap: `${baseUrl}/sitemap.xml`,
+      episodes: `${baseUrl}/episodes.json`,
+      searchIndex: `${baseUrl}/search-index.json`,
+      llms: `${baseUrl}/llms.txt`,
+      episodesLlms: `${baseUrl}/episodes/llms.txt`,
+      apiLlms: `${baseUrl}/api/llms.txt`,
+      wellKnownLlms: `${baseUrl}/.well-known/llms.txt`,
+      indexMarkdown: `${baseUrl}/index.md`,
+    },
+    ...(episode
+      ? { episode: epView(episode) }
+      : latest
+        ? { latestEpisode: epView(latest), totalEpisodes: sortedDesc.length }
+        : {}),
+  };
+
+  return new Response(JSON.stringify(payload, null, 2), {
+    headers: apiHeaders({
+      "Cache-Control": HTML_CACHE_CONTROL,
+      Vary: "Accept",
+      Link: linkHeader(baseUrl, episode),
+    }),
+  });
+}
+
+// ─── Markdown view ────────────────────────────────────────────────────────
+// Episode-level markdown (homepage markdown is the static /index.md). Same
+// content as the SSR HTML, formatted for agent consumption.
+function buildEpisodeMarkdown(episode, baseUrl) {
+  const lines = [];
+  lines.push(`# ${episode.title}`);
+  lines.push("");
+  const meta = [episode.date, `S${episode.season}E${episode.id}`, episode.duration].filter(Boolean).join(" · ");
+  if (meta) {
+    lines.push(`*${meta}*`);
+    lines.push("");
+  }
+  if (episode.desc) {
+    lines.push(episode.desc);
+    lines.push("");
+  }
+  lines.push(`**Audio:** ${baseUrl}/${episode.audioFile}`);
+  if (episode.hasSrt) {
+    const txt = episode.audioFile.replace(".mp3", ".txt");
+    lines.push(`**Transcript:** ${baseUrl}/${txt}`);
+  }
+  lines.push(`**Episode page:** ${baseUrl}/${episode.id}`);
+  lines.push("");
+
+  if (Array.isArray(episode.topics) && episode.topics.length) {
+    lines.push("## Topics");
+    for (const t of episode.topics) lines.push(`- ${t}`);
+    lines.push("");
+  }
+  if (Array.isArray(episode.guests) && episode.guests.length) {
+    lines.push("## Guests");
+    for (const g of episode.guests) {
+      if (typeof g === "string") lines.push(`- ${g}`);
+      else if (g?.name) lines.push(g.url ? `- [${g.name}](${g.url})` : `- ${g.name}`);
+    }
+    lines.push("");
+  }
+  if (Array.isArray(episode.chapters) && episode.chapters.length) {
+    lines.push("## Chapters");
+    for (const c of episode.chapters) {
+      const title = c.title || c.name;
+      if (!title) continue;
+      const t = c.start || c.time || "";
+      lines.push(t ? `- ${t} — ${title}` : `- ${title}`);
+    }
+    lines.push("");
+  }
+
+  if (episode.fullText) {
+    lines.push("## Transcript");
+    lines.push("");
+    for (const para of episode.fullText.split("\n").filter(Boolean)) {
+      lines.push(para);
+      lines.push("");
+    }
+  }
+
+  lines.push("## For agents");
+  lines.push(`- JSON view: \`${baseUrl}/${episode.id}?mode=agent\``);
+  lines.push(`- Search API: \`GET ${baseUrl}/api/search?q=<query>\``);
+  lines.push(`- MCP server: ${baseUrl}/mcp`);
+  lines.push(`- All episodes: ${baseUrl}/episodes/llms.txt`);
+  lines.push("");
+
+  return new Response(lines.join("\n"), {
+    headers: apiHeaders({
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Cache-Control": HTML_CACHE_CONTROL,
+      Vary: "Accept",
+      Link: linkHeader(baseUrl, episode),
+    }),
+  });
+}
+
+function wantsAgentMode(url) {
+  return url.searchParams.get("mode") === "agent";
+}
+
+function wantsMarkdown(request) {
+  const accept = request.headers.get("accept") || "";
+  // Match `text/markdown` even with parameters (q-values, charset).
+  return /\btext\/markdown\b/i.test(accept);
+}
+
+function wantsApplicationJson(request) {
+  const accept = request.headers.get("accept") || "";
+  // Strict — only when the client explicitly asks for JSON (not `*/*`).
+  return /\bapplication\/json\b/i.test(accept);
+}
+
+// ─── /.well-known/mcp* manifest + live handshake ──────────────────────────
+// Multiple URL spellings, one manifest body. Cheap announcement surface for
+// any client that probes a candidate well-known path. POST routes to the
+// real MCP JSON-RPC handler (orank-style "live handshake" check).
+const WELL_KNOWN_MCP_PATHS = new Set([
+  "/.well-known/mcp",
+  "/.well-known/mcp.json",
+  "/.well-known/mcp-configuration",
+  "/.well-known/mcp/server.json",
+]);
+const WELL_KNOWN_MCP_SERVER_CARD = "/.well-known/mcp/server-card.json";
+
+function buildMcpManifest(baseUrl) {
+  return new Response(
+    JSON.stringify(
+      {
+        $schema: "https://modelcontextprotocol.io/schemas/discovery.json",
+        name: MCP_SERVER_INFO.name,
+        title: config.title,
+        description: config.description || "",
+        version: MCP_SERVER_INFO.version,
+        protocolVersion: MCP_PROTOCOL_VERSION,
+        transport: "streamable-http",
+        url: `${baseUrl}/mcp`,
+        endpoint: `${baseUrl}/mcp`,
+        // Same well-known URL also accepts POST for the live handshake.
+        handshakeUrl: `${baseUrl}/.well-known/mcp`,
+        serverCard: `${baseUrl}${WELL_KNOWN_MCP_SERVER_CARD}`,
+        servers: [{ url: `${baseUrl}/mcp`, transport: "streamable-http" }],
+        methods: ["initialize", "ping", "tools/list", "tools/call"],
+        documentation: `${baseUrl}/.well-known/openapi.json`,
+      },
+      null,
+      2
+    ) + "\n",
+    {
+      headers: apiHeaders({ "Cache-Control": HTML_CACHE_CONTROL }),
+    }
+  );
+}
+
+// MCP server-card.json — preview-able card describing the server before an
+// agent opens a transport connection. Schema: name, description, version,
+// serverUrl, tools[].
+function buildMcpServerCard(baseUrl) {
+  const card = {
+    $schema: "https://modelcontextprotocol.io/schemas/server-card.json",
+    name: MCP_SERVER_INFO.name,
+    title: config.title,
+    description:
+      `Listener-facing MCP server for ${config.title}. ` +
+      "Search episodes, fetch transcripts, get the latest, browse the catalog, and grab the RSS feed for subscription.",
+    version: MCP_SERVER_INFO.version,
+    protocolVersion: MCP_PROTOCOL_VERSION,
+    transport: "streamable-http",
+    serverUrl: `${baseUrl}/mcp`,
+    handshakeUrl: `${baseUrl}/.well-known/mcp`,
+    documentation: `${baseUrl}/.well-known/openapi.json`,
+    publisher: config.author || undefined,
+    contentType: "podcast",
+    language: config.language || undefined,
+    tools: MCP_TOOLS.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    })),
+  };
+  return new Response(JSON.stringify(card, null, 2) + "\n", {
+    headers: apiHeaders({ "Cache-Control": HTML_CACHE_CONTROL }),
+  });
+}
+
+// ─── RFC 8288 Link header ─────────────────────────────────────────────────
+// Advertises sitemap, markdown alternates, OpenAPI service description,
+// agent.json/agent-card, llms.txt, and the MCP server. Cheap, broadcasts
+// every machine-readable representation of the resource.
+function linkHeader(baseUrl, episode) {
+  const mdAlternate = episode ? `${baseUrl}/${episode.id}.md` : `${baseUrl}/index.md`;
+  const links = [
+    `<${baseUrl}/sitemap.xml>; rel="sitemap"`,
+    `<${mdAlternate}>; rel="alternate"; type="text/markdown"`,
+    `<${baseUrl}/llms.txt>; rel="alternate"; type="text/plain"; title="llms.txt"`,
+    `<${baseUrl}/.well-known/openapi.json>; rel="service-desc"; type="application/json"`,
+    `<${baseUrl}/.well-known/agent.json>; rel="describedby"; type="application/json"`,
+    `<${baseUrl}/.well-known/agent-card.json>; rel="alternate"; type="application/json"; title="agent-card"`,
+    `<${baseUrl}/.well-known/agent-skills/index.json>; rel="alternate"; type="application/json"; title="agent-skills"`,
+    `<${baseUrl}/.well-known/schema-map.xml>; rel="alternate"; type="application/xml"; title="schemamap"`,
+    `<${baseUrl}/mcp>; rel="mcp"; type="application/json"`,
+    `<${baseUrl}/.well-known/mcp>; rel="mcp"; type="application/json"`,
+    `<${baseUrl}/rss.xml>; rel="alternate"; type="application/rss+xml"`,
+  ];
+  return links.join(", ");
 }
 
 function getThemeFromCookie(request) {
@@ -381,12 +791,15 @@ function renderStaticPage(kind, request) {
     .replace("__EP_JSON__", "null")
     .replace("__SEARCH_JSON__", JSON.stringify({ staticPage: kind }))
     .replace("__SSR_CONTENT__", buildStaticSsr(title, text))
+    .replace("__SSR_H1__", esc(title))
     .replace(/<html\b/, `<html data-theme="${theme}"`)
     .replace(/\{\{CSP_NONCE\}\}/g, nonce);
 
   const headers = new Headers({
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": HTML_CACHE_CONTROL,
+    Vary: "Accept",
+    Link: linkHeader(baseUrl, null),
     ...securityHeaders(nonce),
   });
   return new Response(html, { headers });
@@ -438,12 +851,15 @@ function renderPage(episode, request) {
     }
   }
 
+  const ssrH1 = episode ? esc(episode.title) : esc(config.title);
+
   const nonce = crypto.randomUUID();
   const html = template
     .replace("<!--OG_TAGS-->", ogTags)
     .replace("__EP_JSON__", JSON.stringify(episode || null))
     .replace("__SEARCH_JSON__", "null")
     .replace("__SSR_CONTENT__", buildSsrContent(episode))
+    .replace("__SSR_H1__", ssrH1)
     .replace(/<html\b/, `<html data-theme="${theme}"`)
     .replace("</head>", `${preloadHints}\n  </head>`)
     .replace(/\{\{CSP_NONCE\}\}/g, nonce);
@@ -451,6 +867,8 @@ function renderPage(episode, request) {
   const headers = new Headers({
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": HTML_CACHE_CONTROL,
+    Vary: "Accept",
+    Link: linkHeader(baseUrl, episode),
     ...securityHeaders(nonce),
   });
   return new Response(html, { headers });
@@ -504,10 +922,16 @@ const SITE_URL_REWRITES = new Set([
   "/robots.txt",
   "/index.md",
   "/episodes/llms.txt",
+  "/api/llms.txt",
+  "/.well-known/llms.txt",
   "/.well-known/agent.json",
   "/.well-known/agent-card.json",
   "/.well-known/schema-map.xml",
   "/.well-known/openapi.json",
+  "/.well-known/agent-skills/index.json",
+  "/.well-known/ai-plugin.json",
+  "/AGENTS.md",
+  "/docs.md",
 ]);
 
 const REWRITE_CONTENT_TYPES = {
@@ -517,10 +941,16 @@ const REWRITE_CONTENT_TYPES = {
   "/robots.txt": "text/plain; charset=utf-8",
   "/index.md": "text/markdown; charset=utf-8",
   "/episodes/llms.txt": "text/plain; charset=utf-8",
+  "/api/llms.txt": "text/plain; charset=utf-8",
+  "/.well-known/llms.txt": "text/plain; charset=utf-8",
   "/.well-known/agent.json": "application/json; charset=utf-8",
   "/.well-known/agent-card.json": "application/json; charset=utf-8",
   "/.well-known/schema-map.xml": "application/xml; charset=utf-8",
   "/.well-known/openapi.json": "application/json; charset=utf-8",
+  "/.well-known/agent-skills/index.json": "application/json; charset=utf-8",
+  "/.well-known/ai-plugin.json": "application/json; charset=utf-8",
+  "/AGENTS.md": "text/markdown; charset=utf-8",
+  "/docs.md": "text/markdown; charset=utf-8",
 };
 
 const REWRITE_CACHE_CONTROL = {
@@ -529,10 +959,16 @@ const REWRITE_CACHE_CONTROL = {
   "/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
   "/index.md": "public, max-age=3600, stale-while-revalidate=604800",
   "/episodes/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
+  "/api/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
+  "/.well-known/llms.txt": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/agent.json": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/agent-card.json": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/schema-map.xml": "public, max-age=3600, stale-while-revalidate=604800",
   "/.well-known/openapi.json": "public, max-age=3600, stale-while-revalidate=604800",
+  "/.well-known/agent-skills/index.json": "public, max-age=3600, stale-while-revalidate=604800",
+  "/.well-known/ai-plugin.json": "public, max-age=3600, stale-while-revalidate=604800",
+  "/AGENTS.md": "public, max-age=3600, stale-while-revalidate=604800",
+  "/docs.md": "public, max-age=3600, stale-while-revalidate=604800",
 };
 
 // Cache rules for static files served through middleware (mirrors _headers)
@@ -562,16 +998,65 @@ export async function onRequest({ request, next, env }) {
   const path = url.pathname;
   const ua = request.headers.get("user-agent") || "";
   const bot = BOTS.test(ua);
+  const baseUrl = getBaseUrl(request);
+
+  // MCP discovery — multiple well-known spellings, one manifest. Handle
+  // before the static-asset branch so the `.json` suffix doesn't fall
+  // through to the Pages asset server. POST routes to the live JSON-RPC
+  // handler so agents can initialize directly at the well-known URL.
+  if (WELL_KNOWN_MCP_PATHS.has(path)) {
+    if (request.method === "POST") return handleMcpPost(request);
+    if (request.method === "GET" || request.method === "HEAD") return buildMcpManifest(baseUrl);
+    return errors.methodNotAllowed("GET, POST, OPTIONS");
+  }
+  if (path === WELL_KNOWN_MCP_SERVER_CARD) {
+    if (request.method === "GET" || request.method === "HEAD") return buildMcpServerCard(baseUrl);
+    return errors.methodNotAllowed("GET, OPTIONS");
+  }
 
   // Absolute-URL placeholders in generated static files
   if (SITE_URL_REWRITES.has(path)) {
     return rewriteSiteUrl(request, next);
   }
 
-  // Pages Functions (search API, MCP server) handle their own paths.
-  // Pass through so file-based routes under functions/ can run.
-  if (path === "/mcp" || path.startsWith("/api/")) {
+  // Pages Functions (search API, MCP server, /ask, /status) handle their
+  // own paths. Pass through so file-based routes under functions/ can run.
+  if (path === "/mcp" || path === "/ask" || path === "/status" || path.startsWith("/api/")) {
     return next();
+  }
+
+  // Episode markdown view (/<NN>.md) — must run BEFORE the static-asset
+  // branch below, which would otherwise serve a 404 from Pages for the
+  // `.md` extension.
+  const epMdMatch = path.match(/^\/(\d{1,3})\.md$/);
+  if (epMdMatch) {
+    const id = parseInt(epMdMatch[1]);
+    const ep = episodes.find((e) => e.id === id);
+    if (!ep) return errors.episodeNotFound(id);
+    return buildEpisodeMarkdown(ep, baseUrl);
+  }
+
+  // /docs alias → serve /docs.md bytes with markdown content-type.
+  // Pages routes by URL path, so we can't simply call next() with a
+  // rewritten URL — fetch the static asset via env.ASSETS instead.
+  if (path === "/docs") {
+    if (env?.ASSETS) {
+      const docsUrl = new URL(request.url);
+      docsUrl.pathname = "/docs.md";
+      const upstream = await env.ASSETS.fetch(new Request(docsUrl, request));
+      const text = (await upstream.text()).replace(/\{\{SITE_URL\}\}/g, baseUrl);
+      return new Response(text, {
+        status: upstream.status,
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Cache-Control": REWRITE_CACHE_CONTROL["/docs.md"],
+          Vary: "Accept",
+          Link: linkHeader(baseUrl, null),
+        },
+      });
+    }
+    // No ASSETS binding (shouldn't happen on Pages) → redirect.
+    return redirect301("/docs.md");
   }
 
   // Static assets: pass through to Pages with cache headers
@@ -609,11 +1094,19 @@ export async function onRequest({ request, next, env }) {
     return redirect301("/");
   }
 
-  // Episode: /NN
+  // Episode: /NN with optional ?mode=agent or Accept: text/markdown.
+  // (The /NN.md form is handled earlier, before the static-asset branch.)
   const epMatch = path.match(/^\/(\d{1,3})$/);
   if (epMatch) {
-    const ep = episodes.find((e) => e.id === parseInt(epMatch[1]));
-    if (!ep) return redirect301("/");
+    const id = parseInt(epMatch[1]);
+    const ep = episodes.find((e) => e.id === id);
+    const wantsJson = wantsAgentMode(url) || wantsApplicationJson(request);
+    if (!ep) {
+      // Agent context → real 404 with JSON envelope. Browsers → 301 to home.
+      return wantsJson || wantsMarkdown(request) ? errors.episodeNotFound(id) : redirect301("/");
+    }
+    if (wantsAgentMode(url) || wantsApplicationJson(request)) return buildAgentJson(ep, baseUrl);
+    if (wantsMarkdown(request)) return buildEpisodeMarkdown(ep, baseUrl);
     return renderPage(ep, request);
   }
 
@@ -625,8 +1118,14 @@ export async function onRequest({ request, next, env }) {
     return renderStaticPage("privacy", request);
   }
 
-  // Homepage
+  // Homepage — agent JSON view, markdown negotiation, or HTML
   if (path === "/" || path === "") {
+    if (wantsAgentMode(url)) return buildAgentJson(null, baseUrl);
+    if (wantsMarkdown(request)) {
+      // Delegate to the static /index.md, rewritten for the request host.
+      const mdRequest = new Request(new URL("/index.md", request.url), request);
+      return rewriteSiteUrl(mdRequest, next);
+    }
     return renderPage(null, request);
   }
 

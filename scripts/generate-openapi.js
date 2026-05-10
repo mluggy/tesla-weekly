@@ -1,8 +1,11 @@
 // Generates /.well-known/openapi.json — describes the listener-facing
 // read-only API surface so agents can introspect tools without scraping.
 //
-// Endpoints described:
+// Endpoints described (operationIds map directly to LLM function calls):
 //   GET  /api/search       — server-side full-text search
+//   POST /ask              — NLWeb-style natural-language ask (JSON or SSE)
+//   GET  /ask              — same, query-string variant
+//   GET  /status           — service health for circuit-breaker logic
 //   GET  /episodes.json    — full episode list (static)
 //   GET  /search-index.json — flat search index (static)
 //   GET  /rss.xml          — podcast feed
@@ -15,18 +18,36 @@ import config from "./load-config.js";
 
 const SITE = "{{SITE_URL}}";
 
+// Reused response refs for the consistent error envelope + rate-limit
+// headers. Keeps the typed coverage at 7/7 instead of 2/7.
+const errorResponses = {
+  "400": { $ref: "#/components/responses/BadRequest" },
+  "404": { $ref: "#/components/responses/NotFound" },
+  "405": { $ref: "#/components/responses/MethodNotAllowed" },
+  "429": { $ref: "#/components/responses/RateLimited" },
+  "500": { $ref: "#/components/responses/InternalError" },
+};
+
 const spec = {
   openapi: "3.1.0",
   info: {
     title: `${config.title} — Listener API`,
-    version: "1.0.0",
+    version: "1.1.0",
     description:
       `Read-only API for consuming ${config.title} episodes. ` +
       `All endpoints are public, unauthenticated, and safe to call from ` +
       `assistant agents on behalf of a listener. ` +
-      `For native MCP clients see POST ${SITE}/mcp.`,
+      `For native MCP clients see POST ${SITE}/mcp. ` +
+      `For natural-language search see POST ${SITE}/ask (NLWeb-style, JSON or SSE).`,
     ...(config.author ? { contact: { name: config.author } } : {}),
     ...(config.license ? { license: { name: config.license } } : {}),
+    "x-rate-limit-policy": {
+      limit: 60,
+      window: "1 minute",
+      scope: "per IP",
+      headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
+      docs: `${SITE}/api/llms.txt`,
+    },
   },
   servers: [{ url: SITE }],
   paths: {
@@ -56,16 +77,78 @@ const spec = {
         responses: {
           "200": {
             description: "Ranked search results.",
+            headers: rateLimitResponseHeaders(),
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/SearchResponse" },
               },
             },
           },
-          "400": {
-            description: "Missing query parameter.",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          ...errorResponses,
+        },
+      },
+    },
+    "/ask": {
+      post: {
+        summary: "Ask the show a question",
+        description:
+          "NLWeb-style natural-language ask endpoint. Returns episodes ranked by transcript relevance. " +
+          "Set `Accept: text/event-stream` (or `Prefer: streaming=true`) for SSE streaming with " +
+          "`start`, `result`, `complete` events.",
+        operationId: "ask",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AskRequest" },
+              example: { query: "ai agents", limit: 5 },
+            },
           },
+        },
+        responses: {
+          "200": {
+            description: "Either JSON or SSE depending on Accept/Prefer headers.",
+            headers: rateLimitResponseHeaders(),
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/AskResponse" } },
+              "text/event-stream": { schema: { type: "string", description: "NLWeb event stream (start, result*, complete)." } },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+      get: {
+        summary: "Ask the show a question (query-string variant)",
+        description: "Same as POST /ask but accepts `?q=` for cheap probing.",
+        operationId: "askGet",
+        parameters: [
+          { name: "q", in: "query", required: true, schema: { type: "string", minLength: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 10 } },
+        ],
+        responses: {
+          "200": {
+            description: "JSON response (use POST + Accept header for SSE).",
+            headers: rateLimitResponseHeaders(),
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/AskResponse" } },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    "/status": {
+      get: {
+        summary: "Service health",
+        description: "Always 200 when reachable. Use for agent circuit-breaker logic.",
+        operationId: "getStatus",
+        responses: {
+          "200": {
+            description: "Health snapshot.",
+            headers: rateLimitResponseHeaders(),
+            content: { "application/json": { schema: { $ref: "#/components/schemas/StatusResponse" } } },
+          },
+          ...errorResponses,
         },
       },
     },
@@ -142,8 +225,10 @@ const spec = {
         responses: {
           "200": {
             description: "Server manifest.",
-            content: { "application/json": { schema: { type: "object" } } },
+            headers: rateLimitResponseHeaders(),
+            content: { "application/json": { schema: { $ref: "#/components/schemas/McpManifest" } } },
           },
+          ...errorResponses,
         },
       },
       post: {
@@ -170,7 +255,51 @@ const spec = {
         responses: {
           "200": {
             description: "JSON-RPC 2.0 response.",
+            headers: rateLimitResponseHeaders(),
             content: { "application/json": { schema: { $ref: "#/components/schemas/JsonRpcResponse" } } },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    "/.well-known/mcp": {
+      get: {
+        summary: "MCP discovery manifest",
+        description:
+          "Same as GET /mcp but at the well-known URL. Also accepts POST for live JSON-RPC handshake.",
+        operationId: "getMcpWellKnown",
+        responses: {
+          "200": {
+            description: "Discovery manifest.",
+            headers: rateLimitResponseHeaders(),
+            content: { "application/json": { schema: { $ref: "#/components/schemas/McpManifest" } } },
+          },
+        },
+      },
+      post: {
+        summary: "MCP JSON-RPC at well-known URL",
+        description: "Same JSON-RPC endpoint as /mcp; agents that probe well-known can initialize directly.",
+        operationId: "callMcpWellKnown",
+        requestBody: { $ref: "#/components/requestBodies/JsonRpcBody" },
+        responses: {
+          "200": {
+            description: "JSON-RPC 2.0 response.",
+            headers: rateLimitResponseHeaders(),
+            content: { "application/json": { schema: { $ref: "#/components/schemas/JsonRpcResponse" } } },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    "/.well-known/mcp/server-card.json": {
+      get: {
+        summary: "MCP server card",
+        description: "Preview-able card describing this MCP server (name, version, tools[]) before opening a transport.",
+        operationId: "getMcpServerCard",
+        responses: {
+          "200": {
+            description: "Server card.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/McpServerCard" } } },
           },
         },
       },
@@ -234,6 +363,112 @@ const spec = {
           results: { type: "array", items: { $ref: "#/components/schemas/SearchResult" } },
         },
       },
+      AskRequest: {
+        type: "object",
+        required: ["query"],
+        properties: {
+          query: { type: "string", minLength: 1, description: "Natural-language question." },
+          limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
+        },
+      },
+      AskResponse: {
+        type: "object",
+        required: ["_meta", "query", "count", "results"],
+        properties: {
+          _meta: {
+            type: "object",
+            required: ["response_type", "version"],
+            properties: {
+              response_type: { type: "string", enum: ["list"] },
+              version: { type: "string" },
+              site: { type: "string" },
+              contentType: { type: "string" },
+              query: { type: "string" },
+              generated_at: { type: "string", format: "date-time" },
+            },
+          },
+          query: { type: "string" },
+          count: { type: "integer" },
+          took_ms: { type: "integer" },
+          results: { type: "array", items: { $ref: "#/components/schemas/SearchResult" } },
+        },
+      },
+      StatusResponse: {
+        type: "object",
+        required: ["status", "name"],
+        properties: {
+          status: { type: "string", enum: ["ok"] },
+          name: { type: "string" },
+          description: { type: "string" },
+          version: { type: "string" },
+          contentType: { type: "string" },
+          language: { type: "string" },
+          episodeCount: { type: "integer" },
+          latestEpisode: {
+            type: ["object", "null"],
+            properties: {
+              id: { type: "integer" },
+              title: { type: "string" },
+              datePublished: { type: "string" },
+            },
+          },
+          generated_at: { type: "string", format: "date-time" },
+        },
+      },
+      McpManifest: {
+        type: "object",
+        required: ["server", "protocolVersion", "transport", "endpoint"],
+        properties: {
+          server: {
+            type: "object",
+            properties: { name: { type: "string" }, version: { type: "string" } },
+          },
+          protocolVersion: { type: "string" },
+          transport: { type: "string" },
+          endpoint: { type: "string", format: "uri" },
+          methods: { type: "array", items: { type: "string" } },
+          tools: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                description: { type: "string" },
+              },
+            },
+          },
+          docs: { type: "string", format: "uri" },
+        },
+      },
+      McpServerCard: {
+        type: "object",
+        required: ["name", "version", "serverUrl", "tools"],
+        properties: {
+          name: { type: "string" },
+          title: { type: "string" },
+          description: { type: "string" },
+          version: { type: "string" },
+          protocolVersion: { type: "string" },
+          transport: { type: "string" },
+          serverUrl: { type: "string", format: "uri" },
+          handshakeUrl: { type: "string", format: "uri" },
+          publisher: { type: "string" },
+          contentType: { type: "string" },
+          language: { type: "string" },
+          tools: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["name", "description"],
+              properties: {
+                name: { type: "string" },
+                description: { type: "string" },
+                inputSchema: { type: "object" },
+              },
+            },
+          },
+        },
+      },
       JsonRpcRequest: {
         type: "object",
         required: ["jsonrpc", "method"],
@@ -263,11 +498,72 @@ const spec = {
       },
       Error: {
         type: "object",
-        properties: { error: { type: "string" } },
+        required: ["error"],
+        properties: {
+          error: {
+            type: "object",
+            required: ["code", "message"],
+            properties: {
+              code: { type: "string", description: "Machine-readable error code." },
+              message: { type: "string", description: "Human-readable explanation in listener-friendly English." },
+              hint: { type: "string", description: "Actionable next step (URL or example)." },
+              docs_url: { type: "string", format: "uri" },
+            },
+          },
+        },
+      },
+    },
+    requestBodies: {
+      JsonRpcBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/JsonRpcRequest" },
+            example: { jsonrpc: "2.0", id: 1, method: "initialize" },
+          },
+        },
+      },
+    },
+    responses: {
+      BadRequest: {
+        description: "The request was malformed (missing/invalid parameter, bad body).",
+        headers: rateLimitResponseHeaders(),
+        content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+      },
+      NotFound: {
+        description: "The requested resource doesn't exist on this show.",
+        headers: rateLimitResponseHeaders(),
+        content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+      },
+      MethodNotAllowed: {
+        description: "The HTTP method isn't supported on this endpoint.",
+        headers: rateLimitResponseHeaders(),
+        content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+      },
+      RateLimited: {
+        description: "Rate limit exceeded. Inspect Retry-After / X-RateLimit-* headers.",
+        headers: {
+          ...rateLimitResponseHeaders(),
+          "Retry-After": { schema: { type: "integer" }, description: "Seconds to wait before retrying." },
+        },
+        content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+      },
+      InternalError: {
+        description: "Something broke on our side.",
+        headers: rateLimitResponseHeaders(),
+        content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
       },
     },
   },
 };
+
+function rateLimitResponseHeaders() {
+  return {
+    "X-RateLimit-Limit": { schema: { type: "integer" }, description: "Requests allowed per window." },
+    "X-RateLimit-Remaining": { schema: { type: "integer" }, description: "Requests remaining in window." },
+    "X-RateLimit-Reset": { schema: { type: "integer" }, description: "Unix timestamp when window resets." },
+  };
+}
 
 mkdirSync("public/.well-known", { recursive: true });
 writeFileSync("public/.well-known/openapi.json", JSON.stringify(spec, null, 2) + "\n");
