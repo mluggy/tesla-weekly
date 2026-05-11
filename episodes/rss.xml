@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 11 May 2026 14:56:43 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 11 May 2026 15:01:42 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -50,6 +50,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e1.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>1</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Tesla Robotaxi Boom and Semi Order Surge Drive May</title>
+      <description>This episode details Tesla securing a record $100M Semi order, expanding unsupervised robotaxis across Texas, hitting 10 billion FSD miles, stock climbing above $410 on China sales rebound, major recalls, Optimus valuation insights, and energy storage pipeline growth.</description>
+      <link>{{SITE_URL}}/2</link>
+      <guid isPermaLink="false">s2026e2</guid>
+      <pubDate>Mon, 11 May 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e2.mp3" length="16243688" type="audio/mpeg" />
+      <itunes:summary>This episode details Tesla securing a record $100M Semi order, expanding unsupervised robotaxis across Texas, hitting 10 billion FSD miles, stock climbing above $410 on China sales rebound, major recalls, Optimus valuation insights, and energy storage pipeline growth.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:16</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e2.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>2</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
