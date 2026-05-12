@@ -2,9 +2,11 @@ name: Daily Digest
 
 on:
   schedule:
-    # 06:00 UTC every Monday. Covers the past 7 days as one weekly episode
-    # (see resolve_dates() in scripts/daily_digest.py).
-    - cron: '0 6 * * 1'
+    # 08:23 UTC every Monday — past midnight Pacific year-round (00:23 PST
+    # / 01:23 PDT) and off-the-hour to dodge GH Actions queue spikes.
+    # Covers the past 7 days as one weekly episode (see resolve_dates() in
+    # scripts/daily_digest.py).
+    - cron: '23 8 * * 1'
   workflow_dispatch:
     inputs:
       date:
