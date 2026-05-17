@@ -14,6 +14,7 @@
 //   POST /mcp              — MCP JSON-RPC
 
 import { writeFileSync, mkdirSync } from "fs";
+import yaml from "js-yaml";
 import config from "./load-config.js";
 
 const SITE = "{{SITE_URL}}";
@@ -28,11 +29,17 @@ const errorResponses = {
   "500": { $ref: "#/components/responses/InternalError" },
 };
 
-// Targeting OpenAPI 3.0.3 (not 3.1) for the widest parser/validator support.
-// orank-style audits and many LLM function-calling pipelines still ship 3.0
-// parsers; 3.1's array-typed `type` and JSON-Schema-2020-12 features confuse
-// them, dropping the spec to "partial parse" and cascading to the typed-
-// schema count. 3.0 + `nullable: true` is the safe lowest common denominator.
+const notModifiedResponse = {
+  "304": { $ref: "#/components/responses/NotModified" },
+};
+
+// OpenAPI 3.0.3. We trialled 3.1.0 (matches JSON Schema 2020-12) but
+// orank's `api-response-quality` parser is 3.0-only — type-arrays like
+// `["string", "null"]` make it bail with "could not fully parse" while
+// its function-calling-compat path (a separate 3.1-aware analyzer) still
+// works. Sticking to 3.0.3 lets both paths succeed; the old `oneOf +
+// nullable: true` 3.0-invalidity is avoided by spelling out null cases
+// per subschema (or omitting the null case where description suffices).
 const spec = {
   openapi: "3.0.3",
   info: {
@@ -71,6 +78,13 @@ const spec = {
     },
   },
   servers: [{ url: SITE }],
+  tags: [
+    { name: "search", description: "Full-text and natural-language search over episodes." },
+    { name: "episodes", description: "Episode catalog and metadata." },
+    { name: "discovery", description: "Agent-discovery surfaces (status, briefing, RSS, catalog)." },
+    { name: "mcp", description: "Model Context Protocol server and discovery." },
+    { name: "payments", description: "Voluntary x402 / MPP tip-jar." },
+  ],
   paths: {
     "/api/search": {
       get: {
@@ -79,6 +93,7 @@ const spec = {
           "Free-text search over episode title, description, and transcript. " +
           "Returns ranked results with snippets.",
         operationId: "searchEpisodes",
+        tags: ["search"],
         parameters: [
           {
             name: "q",
@@ -123,6 +138,7 @@ const spec = {
           "Set `Accept: text/event-stream` (or `Prefer: streaming=true`) for SSE streaming with " +
           "`start`, `result`, `complete` events.",
         operationId: "ask",
+        tags: ["search"],
         requestBody: {
           required: true,
           content: {
@@ -148,6 +164,7 @@ const spec = {
         summary: "Ask the show a question (query-string variant)",
         description: "Same as POST /ask but accepts `?q=` for cheap probing.",
         operationId: "askGet",
+        tags: ["search"],
         parameters: [
           { name: "q", in: "query", required: true, schema: { type: "string", minLength: 1 } },
           { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 10 } },
@@ -169,6 +186,7 @@ const spec = {
         summary: "Service health",
         description: "Always 200 when reachable. Use for agent circuit-breaker logic.",
         operationId: "getStatus",
+        tags: ["discovery"],
         responses: {
           "200": {
             description: "Health snapshot.",
@@ -189,6 +207,20 @@ const spec = {
           "enabled clients) can route a USDC tip on Base Sepolia testnet by " +
           "default (configurable via `payment` in podcast.yaml).",
         operationId: "donate",
+        tags: ["payments"],
+        parameters: [
+          {
+            name: "X-Payment",
+            in: "header",
+            required: false,
+            schema: { type: "string" },
+            description:
+              "Optional x402 payment payload. If absent, the server replies " +
+              "402 with paymentRequirements (the normal first step). If a " +
+              "client returns with this header carrying the encoded payment, " +
+              "the server replies 200 with a receipt.",
+          },
+        ],
         "x-payment-info": {
           protocols: ["x402", "mpp"],
           scheme: "stablecoin",
@@ -203,8 +235,21 @@ const spec = {
           discovery: `${SITE}/.well-known/discovery/resources`,
         },
         responses: {
+          "200": {
+            description:
+              "Payment acknowledged. Returned when the request includes an " +
+              "`X-Payment` header carrying an encoded x402 payment payload. " +
+              "On-chain settlement is verified asynchronously via the " +
+              "facilitator endpoint.",
+            headers: rateLimitResponseHeaders(),
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/DonateReceipt" },
+              },
+            },
+          },
           "402": {
-            description: "Payment Required (always — voluntary tip jar).",
+            description: "Payment Required (first step — no `X-Payment` header sent).",
             headers: {
               "WWW-Authenticate": {
                 description: "RFC 7235 challenge with Payment scheme.",
@@ -254,6 +299,16 @@ const spec = {
         summary: "List all episodes",
         description: "Static JSON: every episode with id, title, date, duration, audio URL, etc.",
         operationId: "listEpisodes",
+        tags: ["episodes"],
+        parameters: [
+          {
+            name: "If-None-Match",
+            in: "header",
+            required: false,
+            schema: { type: "string" },
+            description: "RFC 9110 conditional request. Server replies 304 if the catalog hasn't changed (Cloudflare Pages emits ETag).",
+          },
+        ],
         responses: {
           "200": {
             description: "Array of episodes (sorted by id ascending).",
@@ -262,6 +317,7 @@ const spec = {
               "application/json": { schema: { $ref: "#/components/schemas/EpisodeList" } },
             },
           },
+          ...notModifiedResponse,
           ...errorResponses,
         },
       },
@@ -273,6 +329,16 @@ const spec = {
           "Flat object mapping episode id → indexed text (title + description + transcript). " +
           "Use /api/search for ranked queries; this is for offline indexing.",
         operationId: "getSearchIndex",
+        tags: ["search"],
+        parameters: [
+          {
+            name: "If-None-Match",
+            in: "header",
+            required: false,
+            schema: { type: "string" },
+            description: "RFC 9110 conditional request. Server replies 304 if the index hasn't changed.",
+          },
+        ],
         responses: {
           "200": {
             description: "Episode-id → indexed text.",
@@ -281,6 +347,7 @@ const spec = {
               "application/json": { schema: { $ref: "#/components/schemas/SearchIndex" } },
             },
           },
+          ...notModifiedResponse,
           ...errorResponses,
         },
       },
@@ -290,6 +357,16 @@ const spec = {
         summary: "Podcast RSS feed",
         description: "RSS 2.0 feed with iTunes/Spotify extensions. Subscribe via any podcast app.",
         operationId: "getRss",
+        tags: ["discovery"],
+        parameters: [
+          {
+            name: "If-Modified-Since",
+            in: "header",
+            required: false,
+            schema: { type: "string", format: "date-time" },
+            description: "RFC 9110 conditional request. Common for RSS clients to poll efficiently — server replies 304 when the feed is unchanged.",
+          },
+        ],
         responses: {
           "200": {
             description: "RSS 2.0 feed (XML).",
@@ -298,6 +375,7 @@ const spec = {
               "application/rss+xml": { schema: { $ref: "#/components/schemas/RssFeed" } },
             },
           },
+          ...notModifiedResponse,
           ...errorResponses,
         },
       },
@@ -307,6 +385,16 @@ const spec = {
         summary: "Agent briefing",
         description: "Markdown briefing for assistant agents — show identity, capabilities, latest episode, and pointers to all other agent surfaces.",
         operationId: "getLlmsTxt",
+        tags: ["discovery"],
+        parameters: [
+          {
+            name: "If-None-Match",
+            in: "header",
+            required: false,
+            schema: { type: "string" },
+            description: "RFC 9110 conditional request. Server replies 304 if the briefing hasn't changed.",
+          },
+        ],
         responses: {
           "200": {
             description: "Markdown briefing.",
@@ -315,6 +403,7 @@ const spec = {
               "text/plain": { schema: { $ref: "#/components/schemas/LlmsTxt" } },
             },
           },
+          ...notModifiedResponse,
           ...errorResponses,
         },
       },
@@ -324,6 +413,7 @@ const spec = {
         summary: "MCP server manifest",
         description: "Returns the MCP server manifest (tools list, transport, protocol version).",
         operationId: "getMcpManifest",
+        tags: ["mcp"],
         responses: {
           "200": {
             description: "Server manifest.",
@@ -340,6 +430,7 @@ const spec = {
           "Methods: initialize, ping, tools/list, tools/call. " +
           "Tools: search_episodes, get_episode, get_latest_episode, list_episodes, subscribe_via_rss.",
         operationId: "callMcp",
+        tags: ["mcp"],
         requestBody: {
           required: true,
           content: {
@@ -370,6 +461,7 @@ const spec = {
         description:
           "Same as GET /mcp but at the well-known URL. Also accepts POST for live JSON-RPC handshake.",
         operationId: "getMcpWellKnown",
+        tags: ["mcp"],
         responses: {
           "200": {
             description: "Discovery manifest.",
@@ -383,7 +475,19 @@ const spec = {
         summary: "MCP JSON-RPC at well-known URL",
         description: "Same JSON-RPC endpoint as /mcp; agents that probe well-known can initialize directly.",
         operationId: "callMcpWellKnown",
-        requestBody: { $ref: "#/components/requestBodies/JsonRpcBody" },
+        tags: ["mcp"],
+        // Inlined (instead of `$ref: "#/components/requestBodies/..."`).
+        // Some scanners can't dereference requestBody refs and bail with
+        // "could not fully parse".
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/JsonRpcRequest" },
+              example: { jsonrpc: "2.0", id: 1, method: "initialize" },
+            },
+          },
+        },
         responses: {
           "200": {
             description: "JSON-RPC 2.0 response.",
@@ -399,6 +503,7 @@ const spec = {
         summary: "MCP server card",
         description: "Preview-able card describing this MCP server (name, version, tools[]) before opening a transport.",
         operationId: "getMcpServerCard",
+        tags: ["mcp"],
         responses: {
           "200": {
             description: "Server card.",
@@ -414,6 +519,7 @@ const spec = {
         summary: "API catalog (RFC 9727)",
         description: "Linkset enumerating all agent-accessible APIs and service descriptions.",
         operationId: "getApiCatalog",
+        tags: ["discovery"],
         responses: {
           "200": {
             description: "Linkset of API references.",
@@ -657,9 +763,17 @@ const spec = {
         required: ["jsonrpc", "method"],
         properties: {
           jsonrpc: { type: "string", enum: ["2.0"] },
-          id: { oneOf: [{ type: "integer" }, { type: "string" }], nullable: true },
-          method: { type: "string" },
-          params: { type: "object" },
+          // JSON-RPC 2.0 ids are int | string | null. OpenAPI 3.0 has no
+          // clean spelling for that union (combining `oneOf` with
+          // `nullable: true` is invalid). Use `oneOf` for the two typed
+          // cases; document the null case so docs renderers and 3.0
+          // parsers don't choke on it.
+          id: {
+            description: "JSON-RPC request id; echoed in the response. May also be JSON null per the JSON-RPC 2.0 spec.",
+            oneOf: [{ type: "integer" }, { type: "string" }],
+          },
+          method: { type: "string", description: "Method name (e.g. initialize, tools/list, tools/call)." },
+          params: { type: "object", description: "Method-specific parameter object." },
         },
       },
       JsonRpcResponse: {
@@ -667,16 +781,42 @@ const spec = {
         required: ["jsonrpc"],
         properties: {
           jsonrpc: { type: "string", enum: ["2.0"] },
-          id: { oneOf: [{ type: "integer" }, { type: "string" }], nullable: true },
-          result: {},
+          id: {
+            description: "Echoes the request id. May also be JSON null when the request id was null.",
+            oneOf: [{ type: "integer" }, { type: "string" }],
+          },
+          // JSON-RPC leaves `result` method-dependent. An empty schema
+          // means "any JSON value" — `description` keeps doc renderers
+          // happy without locking the shape down.
+          result: { description: "Method-specific success payload (shape depends on method)." },
           error: {
             type: "object",
+            required: ["code", "message"],
             properties: {
-              code: { type: "integer" },
-              message: { type: "string" },
-              data: {},
+              code: { type: "integer", description: "JSON-RPC 2.0 error code." },
+              message: { type: "string", description: "Human-readable error message." },
+              data: { description: "Optional structured error data." },
             },
           },
+        },
+      },
+      DonateReceipt: {
+        type: "object",
+        required: ["paid", "message"],
+        description: "x402 payment-accepted receipt body.",
+        properties: {
+          paid: { type: "boolean", description: "Server received the payment payload." },
+          settled: { type: "boolean", description: "On-chain settlement confirmed (verified by facilitator)." },
+          message: { type: "string", description: "Listener-friendly acknowledgement." },
+          verification: {
+            type: "object",
+            properties: {
+              protocol: { type: "string", enum: ["x402"] },
+              facilitator: { type: "string", format: "uri" },
+              note: { type: "string" },
+            },
+          },
+          docs: { type: "string", format: "uri" },
         },
       },
       Error: {
@@ -696,18 +836,22 @@ const spec = {
         },
       },
     },
-    requestBodies: {
-      JsonRpcBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/JsonRpcRequest" },
-            example: { jsonrpc: "2.0", id: 1, method: "initialize" },
+    responses: {
+      NotModified: {
+        description:
+          "The conditional GET matched the current ETag (or Last-Modified). " +
+          "Body is empty. Cloudflare Pages emits this automatically for static assets.",
+        headers: {
+          ETag: {
+            description: "Strong validator. Reuse in If-None-Match on the next request.",
+            schema: { type: "string" },
+          },
+          "Cache-Control": {
+            description: "Echoed cache policy.",
+            schema: { type: "string" },
           },
         },
       },
-    },
-    responses: {
       BadRequest: {
         description: "The request was malformed (missing/invalid parameter, bad body).",
         headers: rateLimitResponseHeaders(),
@@ -750,4 +894,11 @@ function rateLimitResponseHeaders() {
 
 mkdirSync("public/.well-known", { recursive: true });
 writeFileSync("public/.well-known/openapi.json", JSON.stringify(spec, null, 2) + "\n");
-console.log("Generated public/.well-known/openapi.json");
+// YAML companion. orank's `api-response-quality` parser appears to
+// stream-parse with a fetch limit — JSON either parses fully or fails
+// (we observed the same "could not fully parse" 1/3 result on
+// stripe.com, github.com, and us); YAML degrades gracefully and a
+// spree.commerce-style YAML scores 2/3 on the same check. Both files
+// describe the exact same surface — just two encodings.
+writeFileSync("public/.well-known/openapi.yaml", yaml.dump(spec, { lineWidth: 120, noRefs: false }));
+console.log("Generated public/.well-known/openapi.json + openapi.yaml");

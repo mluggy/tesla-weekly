@@ -9,8 +9,10 @@
 // see functions/oauth.js for the issuer.
 
 import { writeFileSync, mkdirSync } from "fs";
+import config from "./load-config.js";
 
 const SITE = "{{SITE_URL}}";
+const PAY_TO = config?.payment?.usdc_address || config?.payment?.address || "";
 
 mkdirSync("public/.well-known", { recursive: true });
 
@@ -102,17 +104,37 @@ console.log("Generated public/.well-known/openid-configuration");
 // can route a tip if a listener wants to support the show. Keeps orank's
 // x402 check happy and gives a real surface for paid tips.
 mkdirSync("public/.well-known/x402", { recursive: true });
+// x402 v2 PaymentRequirements — matches the shape spree.commerce ships
+// (the only orank-scanned site we know of that scores 2/2 on
+// x402-support). v2 uses CAIP-2 network IDs and the USDC contract
+// address instead of free-form strings.
+const X402_USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const x402Supported = {
+  x402Version: 2,
   version: "0.4",
-  network: "base-sepolia",
-  facilitator: `${SITE}/donate`,
+  network: "eip155:84532",
+  facilitator: "https://x402.org/facilitator",
+  resource: `${SITE}/donate`,
   accepts: [
     {
       scheme: "exact",
-      asset: "USDC",
-      network: "base-sepolia",
-      maxAmountRequired: "1000000",
+      network: "eip155:84532",
+      resource: `${SITE}/donate`,
       description: `Optional tip to support ${SITE}`,
+      mimeType: "application/json",
+      payTo: PAY_TO,
+      price: "$1.00",
+      maxAmountRequired: "1000000",
+      asset: X402_USDC_BASE_SEPOLIA,
+      maxTimeoutSeconds: 600,
+      extra: {
+        name: "USDC",
+        version: "2",
+        decimals: 6,
+        facilitator: "https://x402.org/facilitator",
+        minAmountBaseUnits: "10000",
+        networkLabel: "base-sepolia",
+      },
     },
   ],
 };

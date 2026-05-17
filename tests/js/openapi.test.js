@@ -14,14 +14,23 @@ beforeAll(() => {
   execSync("node scripts/generate-openapi.js", { stdio: "pipe" });
 });
 
+describe("openapi.yaml companion", () => {
+  it("public/.well-known/openapi.yaml exists alongside the JSON spec", () => {
+    // YAML companion exists because orank's api-response-quality parser
+    // chokes on JSON (1/3 on stripe.com/github.com/podcast.lugassy.net)
+    // but accepts YAML (2/3 on spree.commerce). Same content, two encodings.
+    expect(existsSync("public/.well-known/openapi.yaml")).toBe(true);
+  });
+});
+
 describe("/.well-known/openapi.json", () => {
   let spec;
   beforeAll(() => {
     spec = JSON.parse(readFileSync("public/.well-known/openapi.json", "utf8"));
   });
 
-  it("declares OpenAPI 3.1.x", () => {
-    expect(spec.openapi).toMatch(/^3\.1/);
+  it("declares OpenAPI 3.0.x", () => {
+    expect(spec.openapi).toMatch(/^3\.0/);
   });
 
   it("declares info.title + info.version + info.description", () => {

@@ -145,6 +145,77 @@ describe("homepage Accept: text/markdown", () => {
   });
 });
 
+describe("Accept-header content negotiation (RFC 9110)", () => {
+  it("serves markdown when q-value ranks it above HTML", async () => {
+    const resp = await call("/", {
+      headers: { Accept: "text/html;q=0.8, text/markdown;q=0.9" },
+    });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/markdown/);
+  });
+
+  it("serves HTML when q-value ranks it above markdown", async () => {
+    const resp = await call("/", {
+      headers: { Accept: "text/markdown;q=0.1, text/html" },
+    });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/html/);
+  });
+
+  it("does NOT serve markdown when explicitly refused (q=0)", async () => {
+    const resp = await call("/", {
+      headers: { Accept: "text/markdown;q=0, text/html" },
+    });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/html/);
+  });
+
+  it("returns 406 when no offered type is acceptable", async () => {
+    const resp = await call("/", { headers: { Accept: "application/xml" } });
+    expect(resp.status).toBe(406);
+    const body = JSON.parse(await resp.text());
+    expect(body.error.code).toBe("not_acceptable");
+    expect(resp.headers.get("Vary") || "").toMatch(/Accept/);
+  });
+
+  it("returns 406 when every offering is refused with q=0", async () => {
+    const resp = await call("/", {
+      headers: { Accept: "text/markdown;q=0, text/html;q=0" },
+    });
+    expect(resp.status).toBe(406);
+  });
+
+  it("treats */* as indifferent → server-preferred HTML", async () => {
+    const resp = await call("/", { headers: { Accept: "*/*" } });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/html/);
+  });
+
+  it("serves HTML for a typical browser Accept header", async () => {
+    const resp = await call("/", {
+      headers: {
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/html/);
+  });
+
+  it("episode /<id> honours q-weighted markdown preference", async () => {
+    const resp = await call("/1", {
+      headers: { Accept: "text/html;q=0.5, text/markdown;q=1.0" },
+    });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/markdown/);
+  });
+
+  it("episode /<id> returns 406 for an unsatisfiable Accept header", async () => {
+    const resp = await call("/1", { headers: { Accept: "image/png" } });
+    expect(resp.status).toBe(406);
+  });
+});
+
 describe("episode redirect /<id>", () => {
   // Episode regex matches /\d{1,3} — use a 3-digit ID that doesn't exist
   // in the seeded fixture (the test fixture has only id=1).
@@ -179,7 +250,9 @@ describe("/.well-known/mcp dispatch", () => {
     expect(body.transport).toBe("streamable-http");
     expect(body.auth.type).toBe("oauth2");
     expect(body.auth.required).toBe(false);
+    expect(body.auth.anonymous).toBe(true);
     expect(body.auth.pkce).toBe("S256");
+    expect(body.auth.code_challenge_methods_supported).toEqual(["S256"]);
   });
 
   it("POST routes to the MCP JSON-RPC handler (live handshake)", async () => {
@@ -222,22 +295,37 @@ describe("/openapi.json + /swagger.json aliases", () => {
   // env.ASSETS in our test fixture returns markdown for any fetch — the
   // middleware should still rewrite the Content-Type to application/json
   // for the OpenAPI aliases, since real Pages serves the JSON file.
-  it("/openapi.json returns application/json content-type", async () => {
+  it("/openapi.json returns the OAS JSON content-type", async () => {
     const resp = await call("/openapi.json");
     expect(resp.status).toBe(200);
-    expect(resp.headers.get("Content-Type")).toMatch(/application\/json/);
+    // application/vnd.oai.openapi+json is the registered OAS media type;
+    // the +json structured suffix makes it JSON-parseable for clients
+    // that don't recognise the vendor prefix.
+    expect(resp.headers.get("Content-Type")).toMatch(/application\/vnd\.oai\.openapi\+json/);
   });
 
-  it("/swagger.json (legacy alias) returns application/json", async () => {
+  it("/swagger.json (legacy alias) returns the OAS JSON content-type", async () => {
     const resp = await call("/swagger.json");
     expect(resp.status).toBe(200);
-    expect(resp.headers.get("Content-Type")).toMatch(/application\/json/);
+    expect(resp.headers.get("Content-Type")).toMatch(/application\/vnd\.oai\.openapi\+json/);
   });
 
   it("aliases include the standard Link header", async () => {
     const resp = await call("/openapi.json");
     const link = resp.headers.get("Link") || "";
     expect(link).toMatch(/rel="sitemap"/);
+  });
+
+  it("/openapi.yaml alias returns the OAS YAML content-type", async () => {
+    const resp = await call("/openapi.yaml");
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/application\/vnd\.oai\.openapi\+yaml/);
+  });
+
+  it("/compare alias serves compare.md as markdown", async () => {
+    const resp = await call("/compare");
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/markdown/);
   });
 });
 
