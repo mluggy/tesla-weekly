@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 18 May 2026 09:13:57 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 18 May 2026 09:45:15 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -66,6 +66,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e2.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>2</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Tesla Battery Push, Model Y Hike and China Trip</title>
+      <description>Covers Tesla&apos;s $250M Giga Berlin battery expansion to 18 GWh, first US Model Y price rise in two years, Musk&apos;s Trump China delegation for FSD progress, and wide Spring 2026 software update with new Self-Driving App and FSD v14.3 releases.</description>
+      <link>{{SITE_URL}}/3</link>
+      <guid isPermaLink="false">s2026e3</guid>
+      <pubDate>Mon, 18 May 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e3.mp3" length="15611102" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla&apos;s $250M Giga Berlin battery expansion to 18 GWh, first US Model Y price rise in two years, Musk&apos;s Trump China delegation for FSD progress, and wide Spring 2026 software update with new Self-Driving App and FSD v14.3 releases.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:49</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e3.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>3</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
