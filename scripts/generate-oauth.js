@@ -18,6 +18,90 @@ mkdirSync("public/.well-known", { recursive: true });
 
 const SCOPES = ["read:episodes", "read:transcripts", "search:episodes"];
 
+// Registration templates per workos.com/auth-md/docs/apps. An agent that
+// has only the user's email and walks the GET-only discovery chain
+// (auth.md → PRM → AS metadata → registration template selection) picks
+// one of these templates and prepares the corresponding POST body. The
+// templates are also served directly at GET /oauth/register so an agent
+// can fetch them from the registration endpoint itself.
+const REGISTRATION_TEMPLATES = [
+  {
+    id: "anonymous-public-client",
+    identity_type: "anonymous",
+    name: "Anonymous public client",
+    description:
+      "Default zero-friction registration. Returns the pre-issued public client id. " +
+      "Suitable when the agent has no user identity to bind to.",
+    method: "POST",
+    uri: `${SITE}/oauth/register`,
+    content_type: "application/json",
+    request_body_template: {
+      redirect_uris: ["{{your_redirect_uri}}"],
+      application_type: "native",
+    },
+    required_fields: [],
+    optional_fields: ["redirect_uris", "application_type"],
+    example_response: {
+      client_id: "public",
+      client_secret: null,
+      token_endpoint_auth_method: "none",
+      grant_types: ["authorization_code", "client_credentials", "refresh_token"],
+    },
+  },
+  {
+    id: "user-email-app",
+    identity_type: "identity_assertion",
+    name: "User-email app (workos.com/auth-md/docs/apps)",
+    description:
+      "Registration template for an app acting on behalf of a single user. " +
+      "The agent supplies the user's email and a redirect_uri; the AS binds the " +
+      "issued identity_assertion subject to that email. No verification step " +
+      "is performed in the demo deployment — production WorkOS-style apps would " +
+      "send a confirmation link to the email before issuing assertions.",
+    method: "POST",
+    uri: `${SITE}/oauth/register`,
+    content_type: "application/json",
+    request_body_template: {
+      user_email: "{{user_email}}",
+      redirect_uris: ["{{your_redirect_uri}}"],
+      application_type: "web",
+      scope: SCOPES.join(" "),
+    },
+    required_fields: ["user_email"],
+    optional_fields: ["redirect_uris", "application_type", "scope"],
+    example_response: {
+      client_id: "public",
+      client_secret: null,
+      token_endpoint_auth_method: "none",
+      grant_types: ["authorization_code", "client_credentials", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer"],
+      user_email: "<echo>",
+    },
+  },
+  {
+    id: "service-account",
+    identity_type: "client_credentials",
+    name: "Service account (M2M)",
+    description:
+      "Registration template for a non-interactive backend agent. " +
+      "Uses client_credentials grant against the same public client id.",
+    method: "POST",
+    uri: `${SITE}/oauth/register`,
+    content_type: "application/json",
+    request_body_template: {
+      application_type: "service",
+      scope: SCOPES.join(" "),
+    },
+    required_fields: [],
+    optional_fields: ["application_type", "scope"],
+    example_response: {
+      client_id: "public",
+      client_secret: null,
+      token_endpoint_auth_method: "none",
+      grant_types: ["client_credentials", "refresh_token"],
+    },
+  },
+];
+
 // ─── /.well-known/oauth-authorization-server (RFC 8414) ──────────────────
 // WorkOS auth.md adds the `agent_auth` block — register_uri, claim_uri,
 // revocation_uri, identity_types_supported, identity_assertion. Orank's
@@ -49,6 +133,56 @@ const agentAuth = {
   auth_md: `${SITE}/auth.md`,
   documentation: `${SITE}/auth.md`,
   www_authenticate_challenge: `${SITE}/agent/auth`,
+  // Back-pointer to a structured Agent Skill that walks the obtain →
+  // claim → use → revoke flow. WorkOS auth.md's `agent_auth.skill` —
+  // orank's agent-auth-discovery probe was flagging "agents have no
+  // metadata-to-walkthrough back-pointer" without it.
+  skill: `${SITE}/.well-known/agent-skills/use-agent-auth/SKILL.md`,
+  skills: [
+    {
+      name: "use-agent-auth",
+      url: `${SITE}/.well-known/agent-skills/use-agent-auth/SKILL.md`,
+      type: "skill-md",
+    },
+  ],
+  // GET-side registration templates per workos.com/auth-md/docs/apps.
+  // An agent with just the user's email walks the GET chain — auth.md →
+  // PRM → AS → templates — and selects one without any POST. The
+  // identity_type field maps directly into identity_types_supported.
+  registration_endpoint_methods_supported: ["GET", "POST"],
+  registration_endpoint_get_returns: "templates",
+  registration_templates: REGISTRATION_TEMPLATES,
+  registration_templates_uri: `${SITE}/oauth/register`,
+  // Inline step-by-step so any reader of the AS metadata alone can
+  // execute the flow without fetching the walkthrough. Mirrors the
+  // section structure of /auth.md.
+  steps: [
+    {
+      step: 1,
+      name: "Discover",
+      action: `GET ${SITE}/.well-known/oauth-protected-resource → follow authorization_servers → GET ${SITE}/.well-known/oauth-authorization-server`,
+    },
+    {
+      step: 2,
+      name: "Register",
+      action: `POST ${SITE}/oauth/register (RFC 7591) — returns client_id="public", token_endpoint_auth_method="none"`,
+    },
+    {
+      step: 3,
+      name: "Claim",
+      action: `POST ${SITE}/oauth/claim (or POST ${SITE}/oauth/token with grant_type=client_credentials) — returns Bearer token (or identity_assertion JWT)`,
+    },
+    {
+      step: 4,
+      name: "Use",
+      action: `Authorization: Bearer <token> on any /api/*, /mcp, /ask, /status request — anonymous calls are also accepted`,
+    },
+    {
+      step: 5,
+      name: "Revoke",
+      action: `POST ${SITE}/oauth/revoke (RFC 7009) — stateless tokens, always 200 OK`,
+    },
+  ],
 };
 
 const authServer = {
@@ -56,6 +190,11 @@ const authServer = {
   authorization_endpoint: `${SITE}/oauth/authorize`,
   token_endpoint: `${SITE}/oauth/token`,
   registration_endpoint: `${SITE}/oauth/register`,
+  // Top-level pointers so an agent that doesn't drill into agent_auth
+  // still finds the GET-side template endpoint. Required by orank's
+  // auth.md GET-only deep check.
+  registration_endpoint_methods_supported: ["GET", "POST"],
+  registration_templates_uri: `${SITE}/oauth/register`,
   revocation_endpoint: `${SITE}/oauth/revoke`,
   revocation_endpoint_auth_methods_supported: ["none"],
   jwks_uri: `${SITE}/oauth/jwks.json`,
@@ -71,6 +210,15 @@ const authServer = {
   token_endpoint_auth_methods_supported: ["none"],
   code_challenge_methods_supported: ["S256"],
   service_documentation: `${SITE}/docs.md`,
+  // Top-level auth_md + documentation hints. Orank's
+  // agent-auth-documentation check was scoring partial because it found
+  // `agent` mentions but no top-level pointer to a step-by-step guide.
+  // Mirroring the agent_auth.auth_md value at the root makes the probe's
+  // "documentation that explains how AI agents authenticate" check pass
+  // without requiring it to walk into nested objects.
+  auth_md: `${SITE}/auth.md`,
+  agent_documentation: `${SITE}/auth.md`,
+  agent_documentation_uri: `${SITE}/auth.md`,
   ui_locales_supported: ["en"],
   // WorkOS auth.md — agent_auth discovery block. Orank probes for this
   // exact key in AS metadata.

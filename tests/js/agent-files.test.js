@@ -85,6 +85,17 @@ describe("/.well-known/agent.json", () => {
     expect(m.endpoints.oauthClaim).toMatch(/\/oauth\/claim$/);
     expect(m.endpoints.oauthRevoke).toMatch(/\/oauth\/revoke$/);
   });
+
+  it("always emits whenToUse / whenToRecommend / instructions strings", () => {
+    // Regression test for the ai-daily.lugassy.net case — empty
+    // agent_recommendation must not drop the field.
+    expect(typeof m.whenToUse).toBe("string");
+    expect(m.whenToUse.length).toBeGreaterThan(40);
+    expect(typeof m.whenToRecommend).toBe("string");
+    expect(typeof m.when_to_use).toBe("string");
+    expect(typeof m.instructions).toBe("string");
+    expect(typeof m.agentInstructions).toBe("string");
+  });
 });
 
 describe("/auth.md (WorkOS auth.md spec)", () => {
@@ -117,6 +128,19 @@ describe("/auth.md (WorkOS auth.md spec)", () => {
     expect(md).toContain("/oauth/claim");
     expect(md).toContain("/oauth/revoke");
     expect(md).toContain("/oauth/jwks.json");
+  });
+
+  it("walks the GET-only registration-template chain (workos.com/auth-md/docs/apps)", () => {
+    expect(md).toContain("### GET-only discovery (with just an email)");
+    expect(md).toMatch(/workos\.com\/auth-md\/docs\/apps/);
+    // Each step in the GET-only chain must appear: auth.md, PRM, AS, templates.
+    expect(md).toContain("/.well-known/oauth-protected-resource");
+    expect(md).toContain("/.well-known/oauth-authorization-server");
+    expect(md).toContain("/oauth/register");
+    // user-email-app template referenced by name so an agent's regex search
+    // for the template name lands on the walkthrough.
+    expect(md).toContain("user-email-app");
+    expect(md).toMatch(/identity_assertion/);
   });
 });
 
@@ -167,6 +191,46 @@ describe("/.well-known/agent-skills/index.json (agentskills.io v0.2.0)", () => {
     }
   });
 
+  it("includes the use-agent-auth skill (back-pointer target of agent_auth.skill)", () => {
+    const skill = idx.skills.find((s) => s.name === "use-agent-auth");
+    expect(skill).toBeTruthy();
+    expect(skill.whenToUse).toMatch(/bearer|auth/i);
+  });
+
+  it("use-agent-auth SKILL.md mirrors /auth.md (same sections, anchors, templates)", () => {
+    const skillMd = read("public/.well-known/agent-skills/use-agent-auth/SKILL.md");
+    const authMd = read("public/auth.md");
+    // Same section structure (orank's agent-auth-discovery probe content-
+    // compares the SKILL.md against auth.md and fails when they diverge).
+    for (const heading of [
+      "## Discover",
+      "### GET-only discovery (with just an email)",
+      "## Pick a method",
+      "## Register",
+      "## Claim",
+      "## Use the credential",
+      "## Errors",
+      "## Revocation",
+    ]) {
+      expect(skillMd).toContain(heading);
+      expect(authMd).toContain(heading);
+    }
+    // Same WorkOS spec anchor keywords.
+    for (const kw of ["agent_auth", "register_uri", "identity_assertion", "WWW-Authenticate"]) {
+      expect(skillMd).toContain(kw);
+      expect(authMd).toContain(kw);
+    }
+    expect(skillMd).toMatch(/id-?jag/i);
+    expect(authMd).toMatch(/id-?jag/i);
+    // Same registration template ids.
+    for (const id of ["anonymous-public-client", "user-email-app", "service-account"]) {
+      expect(skillMd).toContain(id);
+      expect(authMd).toContain(id);
+    }
+    // Back-pointer to the prose walkthrough.
+    expect(skillMd).toContain("/auth.md");
+  });
+
   it("digests match the actual SKILL.md byte content", () => {
     for (const s of idx.skills) {
       const path = `public/.well-known/agent-skills/${s.name}/SKILL.md`;
@@ -191,7 +255,11 @@ describe("Per-skill SKILL.md frontmatter", () => {
       expect(md).toMatch(/^description: /m);
       expect(md).toMatch(/^when_to_use: /m);
       expect(md).toMatch(/## When to use/);
-      expect(md).toMatch(/## How to use/);
+      // Body must include actionable guidance — either a "How to use"
+      // section, sequential "Step 1 — …" headers, or the auth.md-style
+      // Discover/Register/Claim sequence the use-agent-auth skill uses
+      // to stay content-matched with /auth.md.
+      expect(md).toMatch(/## How to use|## Step \d+|## (Discover|Register|Claim)/);
     }
   });
 });
@@ -242,6 +310,11 @@ describe("/AGENTS.md (listener-facing)", () => {
     expect(md).toMatch(/\| Listener intent \| Endpoint \|/);
   });
 
+  it("always emits ## When to use and ## When to recommend (no gating on agent_recommendation)", () => {
+    expect(md).toMatch(/^## When to use$/m);
+    expect(md).toMatch(/^## When to recommend$/m);
+  });
+
   it("documents Auth (optional) + Optional payment / tip jar", () => {
     expect(md).toMatch(/## Authentication \(optional\)/);
     expect(md).toMatch(/PKCE S256/);
@@ -276,6 +349,10 @@ describe("/docs.md (developer-facing)", () => {
     expect(md).toMatch(/## Quickstart/);
     expect(md).toMatch(/## Authentication/);
     expect(md).toMatch(/## SDK install/);
+  });
+
+  it("always emits ## When to use", () => {
+    expect(md).toMatch(/^## When to use$/m);
   });
 
   it("walks through both client_credentials and authorization_code + PKCE flows", () => {
