@@ -402,6 +402,54 @@ describe("Link header — auth.md alternate", () => {
   });
 });
 
+describe("/mcp/ui/<name> — HTTP view of ui:// MCP App resources", () => {
+  it("GET /mcp/ui/latest_episode returns the iframe HTML with full HTTP CSP", async () => {
+    const resp = await call("/mcp/ui/latest_episode");
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Type")).toMatch(/text\/html/);
+    const csp = resp.headers.get("Content-Security-Policy") || "";
+    // frame-ancestors only works as an HTTP header (CSP3 forbids it in
+    // <meta>) — this surface exists specifically to ship that directive
+    // to probes that read CSP from response headers.
+    expect(csp).toMatch(/frame-ancestors[^;]*https:\/\/chatgpt\.com/);
+    expect(csp).toMatch(/frame-ancestors[^;]*https:\/\/claude\.ai/);
+    expect(csp).toMatch(/connect-src[^;]*https:\/\/chatgpt\.com/);
+    expect(csp).toMatch(/form-action[^;]*https:\/\/claude\.ai/);
+    expect(csp).toMatch(/style-src 'self' 'nonce-[0-9a-f]{32}'/);
+    const html = await resp.text();
+    expect(html).toMatch(/^<!DOCTYPE html>/);
+    expect(html).toContain('<meta http-equiv="Content-Security-Policy"');
+  });
+
+  it("HEAD /mcp/ui/catalog returns the same headers, empty body", async () => {
+    const resp = await call("/mcp/ui/catalog", { method: "HEAD" });
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get("Content-Security-Policy")).toMatch(/frame-ancestors/);
+    expect(await resp.text()).toBe("");
+  });
+
+  it("preserves the query string for template URIs", async () => {
+    const resp = await call("/mcp/ui/search?q=ai&limit=3");
+    expect(resp.status).toBe(200);
+    const html = await resp.text();
+    // Body should reference the query somehow — at minimum, render the
+    // search-results card title for "ai".
+    expect(html.toLowerCase()).toContain("ai");
+  });
+
+  it("unknown ui:// URI returns a structured 404", async () => {
+    const resp = await call("/mcp/ui/does-not-exist");
+    expect(resp.status).toBe(404);
+  });
+
+  it("OPTIONS preflight allows GET / HEAD", async () => {
+    const resp = await call("/mcp/ui/latest_episode", { method: "OPTIONS" });
+    expect(resp.status).toBe(204);
+    const methods = resp.headers.get("Access-Control-Allow-Methods") || "";
+    expect(methods.toUpperCase()).toContain("GET");
+  });
+});
+
 describe("RFC 9598 rate-limit headers on every /api/* response", () => {
   it("GET /api returns a JSON index with rate-limit headers", async () => {
     const resp = await call("/api");
@@ -443,6 +491,31 @@ describe("RFC 9598 rate-limit headers on every /api/* response", () => {
   it("/api/llms.txt rewrite carries rate-limit headers", async () => {
     const resp = await call("/api/llms.txt");
     expect(resp.headers.get("RateLimit-Limit")).toBeTruthy();
+  });
+});
+
+describe("agent-mode envelope advertises 202 async pattern + /jobs endpoint", () => {
+  let body;
+  beforeAll(async () => {
+    const resp = await call("/?mode=agent");
+    body = JSON.parse(await resp.text());
+  });
+
+  it("includes async block (orank async-job-pattern check)", () => {
+    expect(body.async.supported).toBe(true);
+    expect(body.async.pattern).toBe("202-accepted-with-location");
+    expect(body.async.statusValues).toEqual(
+      expect.arrayContaining(["pending", "completed", "failed"]),
+    );
+    expect(body.async.headers.response).toEqual(
+      expect.arrayContaining(["Location", "Retry-After"]),
+    );
+    expect(body.async.pollEndpoint).toMatch(/\/jobs\/\{id\}$/);
+  });
+
+  it("endpoints map publishes askAsync + jobs", () => {
+    expect(body.endpoints.askAsync).toMatch(/\/ask\?async=1$/);
+    expect(body.endpoints.jobs).toMatch(/\/jobs\/\{id\}$/);
   });
 });
 

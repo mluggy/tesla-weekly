@@ -60,6 +60,10 @@ const agentJson = {
     search: `${SITE}/api/search?q={query}`,
     ask: `${SITE}/ask`,
     askGet: `${SITE}/ask?q={query}`,
+    askAsync: `${SITE}/ask?async=1`,
+    searchAsync: `${SITE}/api/search?q={query}&async=1`,
+    jobsCreate: `${SITE}/jobs`,
+    jobs: `${SITE}/jobs/{id}`,
     status: `${SITE}/status`,
     mcp: `${SITE}/mcp`,
     mcpDiscovery: [
@@ -114,6 +118,27 @@ const agentJson = {
     scope: "per IP",
     headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
     docs: `${SITE}/api/llms.txt`,
+  },
+  // 202 Accepted + polling pattern for long-running operations.
+  // POST /ask?async=1 → 202 with Location: /jobs/<id>, Retry-After,
+  // and a JSON body { job_id, status, poll_url }. GET the poll_url
+  // until status flips from "pending" to "completed".
+  async: {
+    supported: true,
+    pattern: "202-accepted-with-location",
+    entryPoints: [
+      `${SITE}/jobs`,
+      `${SITE}/ask?async=1`,
+      `${SITE}/api/search?q={query}&async=1`,
+    ],
+    jobsCreate: `${SITE}/jobs`,
+    pollEndpoint: `${SITE}/jobs/{id}`,
+    headers: {
+      request: ["Prefer: respond-async"],
+      response: ["Location", "Retry-After"],
+    },
+    statusValues: ["pending", "completed", "failed"],
+    docs: `${SITE}/api/llms.txt#async`,
   },
   // Onboarding declaration. orank's onboarding-friction probe wants
   // explicit free-tier / sandbox / no-signup signals — a zero-auth API
@@ -380,6 +405,7 @@ agents.push(`| \"Browse the catalog\" | \`GET ${SITE}/episodes.json\` or \`GET $
 agents.push(`| Health check / circuit-breaker | \`GET ${SITE}/status\` |`);
 agents.push(`| Native MCP tool calls | \`POST ${SITE}/mcp\` (Streamable HTTP, JSON-RPC 2.0) |`);
 agents.push(`| MCP server preview before connect | \`GET ${SITE}/.well-known/mcp/server-card.json\` |`);
+agents.push(`| Async (202 + polling) | \`POST ${SITE}/jobs\` (or \`POST ${SITE}/ask?async=1\`, or \`POST ${SITE}/api/search?async=1\`) → 202 + \`Location: /jobs/<id>\`; \`GET ${SITE}/jobs/<id>\` until \`status: completed\` |`);
 agents.push("");
 agents.push("## Rate limits");
 agents.push("");

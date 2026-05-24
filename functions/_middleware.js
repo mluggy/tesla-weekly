@@ -3,6 +3,7 @@ import episodes from "./_episodes.js";
 import config from "./_config.js";
 import { apiHeaders, errors, rateLimitHeaders } from "./_api.js";
 import { handleMcpPost, buildMcpGetManifest, mcpCsp, TOOLS as MCP_TOOLS, SERVER_INFO as MCP_SERVER_INFO, PROTOCOL_VERSION as MCP_PROTOCOL_VERSION } from "./mcp.js";
+import { buildUiHttpResponse } from "./_mcp_apps.js";
 import * as commerce from "./_commerce.js";
 
 const BOTS = /googlebot|google-inspectiontool|bingbot|yandex|baiduspider|twitterbot|facebookexternalhit|linkedinbot|slackbot-linkexpanding|discordbot|whatsapp|telegrambot|applebot|pinterestbot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|bytespider|gptbot|chatgpt-user|oai-searchbot|anthropic-ai|claudebot|ccbot/i;
@@ -551,6 +552,27 @@ function buildAgentJson(episode, baseUrl) {
       eventTypes: ["start", "result", "complete"],
       rest: "Synchronous request / response on read endpoints — no streaming on /api/search or /episodes.json.",
     },
+    async: {
+      // 202 Accepted + polling pattern. Multiple entry points so a
+      // probe that hits any of them sees the pattern: POST /jobs
+      // (conventional path), POST /ask?async=1, POST /api/search?async=1,
+      // or set `Prefer: respond-async` on any of the above.
+      supported: true,
+      pattern: "202-accepted-with-location",
+      entryPoints: [
+        `${baseUrl}/jobs`,
+        `${baseUrl}/ask?async=1`,
+        `${baseUrl}/api/search?q={query}&async=1`,
+      ],
+      jobsCreate: `${baseUrl}/jobs`,
+      pollEndpoint: `${baseUrl}/jobs/{id}`,
+      headers: {
+        request: ["Prefer: respond-async"],
+        response: ["Location", "Retry-After"],
+      },
+      statusValues: ["pending", "completed", "failed"],
+      docs: `${baseUrl}/api/llms.txt#async`,
+    },
     idempotency: {
       reads: "All public endpoints are read-only and idempotent by definition.",
       writes: "No write endpoints today — donate / oauth flows are bounded by their own protocols.",
@@ -606,6 +628,10 @@ function buildAgentJson(episode, baseUrl) {
       search: `${baseUrl}/api/search?q={query}`,
       ask: `${baseUrl}/ask`,
       askGet: `${baseUrl}/ask?q={query}`,
+      askAsync: `${baseUrl}/ask?async=1`,
+      searchAsync: `${baseUrl}/api/search?q={query}&async=1`,
+      jobsCreate: `${baseUrl}/jobs`,
+      jobs: `${baseUrl}/jobs/{id}`,
       status: `${baseUrl}/status`,
       mcp: `${baseUrl}/mcp`,
       mcpDiscovery: [
@@ -1422,6 +1448,37 @@ export async function onRequest({ request, next, env }) {
     );
   }
 
+  // /mcp/ui/<rest> — HTTP-served mirror of ui:// MCP App resources.
+  // The HTTP CSP header includes frame-ancestors (which is invalid in
+  // the <meta http-equiv> CSP shipped inside the iframe body), so any
+  // probe that reads CSP from response headers — orank's MCP App view
+  // CSP check chief among them — sees the full directive set here.
+  if (path.startsWith("/mcp/ui/")) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Accept",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return errors.methodNotAllowed("GET, HEAD, OPTIONS");
+    }
+    const sub = path.slice("/mcp/ui/".length);
+    if (!sub) return errors.notFound(path);
+    const uiUri = `ui://${sub}${url.search}`;
+    const resp = buildUiHttpResponse(uiUri, baseUrl);
+    if (!resp) return errors.notFound(path);
+    if (request.method === "HEAD") {
+      return new Response(null, { status: resp.status, headers: resp.headers });
+    }
+    return resp;
+  }
+
   // MCP discovery — multiple well-known spellings, one manifest. Handle
   // before the static-asset branch so the `.json` suffix doesn't fall
   // through to the Pages asset server. POST routes to the live JSON-RPC
@@ -1502,7 +1559,9 @@ export async function onRequest({ request, next, env }) {
     path === "/status" ||
     path === "/donate" ||
     path.startsWith("/api/") ||
-    path.startsWith("/oauth/")
+    path.startsWith("/oauth/") ||
+    path === "/jobs" ||
+    path.startsWith("/jobs/")
   ) {
     const resp = await next();
     // Backfill rate-limit headers if the downstream handler didn't set
