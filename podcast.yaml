@@ -7,9 +7,13 @@
 #
 # Minimal setup: fill in title, description, author, owner_email, language,
 # and country. Everything else has sensible defaults. The canonical URL is
-# derived from the incoming request at serve time - no site_url needed.
+# baked into agent-discoverable artifacts (auth.md, SKILL.md) at build time.
 
 # -- Show metadata --
+# Canonical site URL — baked into auth.md / SKILL.md at build time so
+# the agentskills.io v0.2.0 digest stays stable across requests.
+site_url: https://tesla-daily.lugassy.net
+
 # Podcast name - shown in the header, RSS feed, downloaded files, and
 # browser tab.
 title: Tesla Weekly
