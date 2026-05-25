@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Sun, 24 May 2026 21:21:41 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 25 May 2026 09:46:32 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -82,6 +82,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e3.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>3</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Musk&apos;s Summit Robotaxi Push and FSD Milestone Week</title>
+      <description>Covers Elon Musk&apos;s virtual appearance at the Smart Mobility Summit with US robotaxi expansion timelines, the FSD v14.3.3 software rollout, and Tesla&apos;s large Model Y recall for missing certification labels.</description>
+      <link>{{SITE_URL}}/4</link>
+      <guid isPermaLink="false">s2026e4</guid>
+      <pubDate>Mon, 25 May 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e4.mp3" length="15580979" type="audio/mpeg" />
+      <itunes:summary>Covers Elon Musk&apos;s virtual appearance at the Smart Mobility Summit with US robotaxi expansion timelines, the FSD v14.3.3 software rollout, and Tesla&apos;s large Model Y recall for missing certification labels.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:48</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e4.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>4</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
