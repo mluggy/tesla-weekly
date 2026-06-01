@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 25 May 2026 09:46:32 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 01 Jun 2026 10:16:05 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -98,6 +98,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e4.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>4</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Roadster Texas-Bound, Optimus Factory Steel &amp; China FSD Hearing</title>
+      <description>Covers Tesla confirming next-gen Roadster production at Giga Texas, first steel erected for the Optimus 10M-unit factory there, Beijing court&apos;s initial hearing in the FSD fraud lawsuit by 10 owners, Texas Megacharger permits advancing for Semi, Cybercab autonomous factory exits, and weekly stock movements around $436.</description>
+      <link>{{SITE_URL}}/5</link>
+      <guid isPermaLink="false">s2026e5</guid>
+      <pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e5.mp3" length="16000193" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla confirming next-gen Roadster production at Giga Texas, first steel erected for the Optimus 10M-unit factory there, Beijing court&apos;s initial hearing in the FSD fraud lawsuit by 10 owners, Texas Megacharger permits advancing for Semi, Cybercab autonomous factory exits, and weekly stock movements around $436.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:05</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e5.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>5</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
