@@ -79,11 +79,15 @@ const REGISTRATION_TEMPLATES = [
   },
   {
     id: "service-account",
-    identity_type: "client_credentials",
+    // M2M still resolves to an `anonymous` identity — the credential is an
+    // anonymous access_token; client_credentials is the *grant* used to get
+    // it, not an identity type (see identity_types_supported).
+    identity_type: "anonymous",
     name: "Service account (M2M)",
     description:
       "Registration template for a non-interactive backend agent. " +
-      "Uses client_credentials grant against the same public client id.",
+      "Uses the client_credentials grant against the public client id; the " +
+      "issued credential is an anonymous access_token.",
     method: "POST",
     uri: `${SITE}/oauth/register`,
     content_type: "application/json",
@@ -108,20 +112,40 @@ const REGISTRATION_TEMPLATES = [
 // agent-auth-discovery probe wants this present in the AS metadata; the
 // PRM cross-links by listing this issuer in `authorization_servers`.
 const agentAuth = {
+  // skill — WorkOS auth.md's metadata→walkthrough back-pointer. The spec
+  // (and orank's agent-auth-discovery deep check) wants this to round-trip
+  // back to the published /auth.md, so an agent that finds the AS metadata
+  // can fetch the prose walkthrough in one hop.
+  skill: `${SITE}/auth.md`,
   // Spec anchors — register_uri / claim_uri / revocation_uri are the
   // three endpoints an agent walks to obtain, exchange, and discard
   // credentials. All three resolve (no 404).
   register_uri: `${SITE}/oauth/register`,
   claim_uri: `${SITE}/oauth/claim`,
   revocation_uri: `${SITE}/oauth/revoke`,
-  // identity_types_supported per WorkOS auth.md: which assertion types
-  // the AS will mint at /claim. "anonymous" + "client_credentials" cover
-  // the zero-auth and M2M paths; "identity_assertion" surfaces the
-  // id-jag-style replayable assertion.
-  identity_types_supported: [
-    "anonymous",
-    "client_credentials",
-    "identity_assertion",
+  // identity_types_supported is drawn from the WorkOS auth.md enum ONLY:
+  // {anonymous, identity_assertion}. client_credentials is an OAuth *grant*
+  // (it lives in grant_types_supported), not an identity type — putting it
+  // here made orank flag a non-spec value. Each advertised type gets a
+  // sibling block below describing the request shape so an agent can look
+  // up exactly what to send.
+  identity_types_supported: ["anonymous", "identity_assertion"],
+  anonymous: {
+    credential_types_supported: ["access_token", "api_key"],
+  },
+  identity_assertion: {
+    // assertion_types: the id-jag token type (agent-verified flow) and
+    // verified_email (user-claimed flow). Variants that used to be
+    // mis-listed at the top level belong here.
+    assertion_types_supported: [
+      "urn:ietf:params:oauth:token-type:id-jag",
+      "verified_email",
+    ],
+    credential_types_supported: ["access_token", "api_key"],
+  },
+  // Lifecycle events an agent can subscribe to (WorkOS auth.md events).
+  events_supported: [
+    "https://schemas.workos.com/events/agent/auth/identity/assertion/revoked",
   ],
   identity_assertion_supported: true,
   identity_assertion_signing_alg_values_supported: ["EdDSA", "HS256"],
@@ -132,12 +156,43 @@ const agentAuth = {
   // Prose walkthrough lives at /auth.md.
   auth_md: `${SITE}/auth.md`,
   documentation: `${SITE}/auth.md`,
+  // Inline, self-contained prose so a parser that scores agent-auth
+  // documentation quality on THIS document alone (without fetching
+  // /auth.md) reads a complete "how an AI agent obtains and uses a token"
+  // guide — not just a pointer. Mirrors the /auth.md sections.
+  how_to_authenticate:
+    "AI agents authenticate with an optional OAuth 2.0 bearer token; every " +
+    "read endpoint also accepts anonymous (no Authorization header) calls. " +
+    "To obtain a token programmatically: (1) POST /oauth/register to get the " +
+    "public client_id (no client secret, token_endpoint_auth_method=none); " +
+    "(2) POST /oauth/token with grant_type=client_credentials (or exchange a " +
+    "/oauth/claim identity_assertion via the JWT-bearer grant) to receive an " +
+    "access_token; (3) send it as 'Authorization: Bearer <access_token>' on " +
+    "any /api/*, /ask, /status, or /mcp request; (4) POST /oauth/revoke to " +
+    "discard it (RFC 7009). Tokens are stateless JWS (EdDSA/HS256), verifiable " +
+    "against /oauth/jwks.json, with a one-hour TTL.",
+  token_request_example: {
+    method: "POST",
+    url: `${SITE}/oauth/token`,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=client_credentials&scope=${SCOPES.join("+")}`,
+  },
+  token_response_example: {
+    access_token: "<jws-bearer-token>",
+    token_type: "Bearer",
+    expires_in: 3600,
+    scope: SCOPES.join(" "),
+  },
+  authenticated_request_example: {
+    method: "GET",
+    url: `${SITE}/api/search?q=ai`,
+    headers: { Authorization: "Bearer <access_token>" },
+    note: "Anonymous (no Authorization header) is also accepted on every read endpoint.",
+  },
   www_authenticate_challenge: `${SITE}/agent/auth`,
-  // Back-pointer to a structured Agent Skill that walks the obtain →
-  // claim → use → revoke flow. WorkOS auth.md's `agent_auth.skill` —
-  // orank's agent-auth-discovery probe was flagging "agents have no
-  // metadata-to-walkthrough back-pointer" without it.
-  skill: `${SITE}/.well-known/agent-skills/use-agent-auth/SKILL.md`,
+  // Structured Agent Skill that walks the obtain → claim → use → revoke
+  // flow (its body is /auth.md verbatim). Kept under `skills[]` now that
+  // `skill` points at the markdown walkthrough per spec.
   skills: [
     {
       name: "use-agent-auth",
