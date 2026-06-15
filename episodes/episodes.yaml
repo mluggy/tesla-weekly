@@ -64,3 +64,12 @@ episodes:
       S/X production end by June 30.
     date: '2026-06-08'
     cost: 1.8222
+  7:
+    season: 2026
+    title: SpaceX IPO, Robotaxi Fleet Reality, FSD Europe Push
+    description: This episode covers the record SpaceX IPO and Musk's 
+      trillionaire milestone, Tesla's unsupervised robotaxi service expanding in
+      Austin but with a tiny fleet of around 59 vehicles, and new FSD v14.3.4 
+      rollout plus European regulatory approvals in Belgium and Denmark.
+    date: '2026-06-15'
+    cost: 1.889
