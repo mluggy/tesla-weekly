@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 15 Jun 2026 10:39:24 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 22 Jun 2026 10:28:01 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -146,6 +146,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e7.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>7</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Cybercab EPA Greenlight and Autonomy Ramp</title>
+      <description>Covers Cybercab EPA certification with detailed specs revealed, base Cybertruck deliveries launching in June, FSD v14.3.4 rollout including Cybertruck summon features, Musk exercising 2018 pay package for $116B gain, and Tesla Semi spotted with FSD validation equipment.</description>
+      <link>{{SITE_URL}}/8</link>
+      <guid isPermaLink="false">s2026e8</guid>
+      <pubDate>Mon, 22 Jun 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e8.mp3" length="13040592" type="audio/mpeg" />
+      <itunes:summary>Covers Cybercab EPA certification with detailed specs revealed, base Cybertruck deliveries launching in June, FSD v14.3.4 rollout including Cybertruck summon features, Musk exercising 2018 pay package for $116B gain, and Tesla Semi spotted with FSD validation equipment.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>09:02</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e8.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>8</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
