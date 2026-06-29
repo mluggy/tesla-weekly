@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 22 Jun 2026 10:28:01 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 29 Jun 2026 10:05:52 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -162,6 +162,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e8.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>8</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>FSD Expands, Megapacks Boom, Optimus Builds</title>
+      <description>Covers Australia FSD v14.3.3 rollout, Grok voice commands for FSD, major Megapack energy deals in Europe, Model Y L launch hints, FSD v14.3.4 updates, Tesla Semi demos, Optimus Gen 3 production prep, and Giga Texas factory construction progress.</description>
+      <link>{{SITE_URL}}/9</link>
+      <guid isPermaLink="false">s2026e9</guid>
+      <pubDate>Mon, 29 Jun 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e9.mp3" length="16133864" type="audio/mpeg" />
+      <itunes:summary>Covers Australia FSD v14.3.3 rollout, Grok voice commands for FSD, major Megapack energy deals in Europe, Model Y L launch hints, FSD v14.3.4 updates, Tesla Semi demos, Optimus Gen 3 production prep, and Giga Texas factory construction progress.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:11</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e9.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>9</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
