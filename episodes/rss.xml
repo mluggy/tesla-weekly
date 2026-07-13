@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 06 Jul 2026 09:50:28 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 13 Jul 2026 11:39:37 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -194,6 +194,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e10.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>10</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Optimus Pivot, Sales Wins, AI Capex Surge</title>
+      <description>Covers Tesla&apos;s rapid Fremont factory conversion for Optimus production, supplier ramps targeting thousands of units weekly, strong global Model Y and Model 3 sales leadership, major 2026 investment plans exceeding $25B, and regulatory notes on robotaxis.</description>
+      <link>{{SITE_URL}}/11</link>
+      <guid isPermaLink="false">s2026e11</guid>
+      <pubDate>Mon, 13 Jul 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e11.mp3" length="15595412" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla&apos;s rapid Fremont factory conversion for Optimus production, supplier ramps targeting thousands of units weekly, strong global Model Y and Model 3 sales leadership, major 2026 investment plans exceeding $25B, and regulatory notes on robotaxis.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:49</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e11.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>11</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
