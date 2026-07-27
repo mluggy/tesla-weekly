@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 13 Jul 2026 11:39:37 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 27 Jul 2026 11:51:30 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -210,6 +210,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e11.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>11</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Q2 Earnings, Optimus Line, Summer Update Hits</title>
+      <description>Tesla posts Q2 2026 financial results with revenue beat but EPS miss and slight net income drop. Q2 update confirms Fremont Model S/X conversion for Optimus production start later this year. Major 2026.26 software update begins rollout with Grok commands, new animations, traction modes and more.</description>
+      <link>{{SITE_URL}}/12</link>
+      <guid isPermaLink="false">s2026e12</guid>
+      <pubDate>Mon, 27 Jul 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e12.mp3" length="16017137" type="audio/mpeg" />
+      <itunes:summary>Tesla posts Q2 2026 financial results with revenue beat but EPS miss and slight net income drop. Q2 update confirms Fremont Model S/X conversion for Optimus production start later this year. Major 2026.26 software update begins rollout with Grok commands, new animations, traction modes and more.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:06</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e12.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>12</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
