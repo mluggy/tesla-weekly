@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Sat, 01 Aug 2026 12:04:51 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 03 Aug 2026 11:56:46 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -226,6 +226,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e12.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>12</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>FSD v14.3.7 Debuts, Optimus Lines Ready</title>
+      <description>FSD v14.3.7 bug fixes and v14.3.5 features roll out; Optimus production lines installed at Fremont with first builds for training; 2026.26 Summer Update adds Grok commands, video calls and navigation tools; France FSD testing hits 195k km milestone and Robotaxi activity grows.</description>
+      <link>{{SITE_URL}}/13</link>
+      <guid isPermaLink="false">s2026e13</guid>
+      <pubDate>Mon, 03 Aug 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e13.mp3" length="17064544" type="audio/mpeg" />
+      <itunes:summary>FSD v14.3.7 bug fixes and v14.3.5 features roll out; Optimus production lines installed at Fremont with first builds for training; 2026.26 Summer Update adds Grok commands, video calls and navigation tools; France FSD testing hits 195k km milestone and Robotaxi activity grows.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:50</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e13.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>13</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
