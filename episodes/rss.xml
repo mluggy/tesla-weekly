@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 03 Aug 2026 11:56:46 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 10 Aug 2026 09:59:29 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -242,6 +242,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e13.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>13</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Terafab Chip Plant, Megapack 3, Cybertruck Win</title>
+      <description>Tesla and SpaceX announce $16.8B Terafab AI semiconductor plant in Texas. Megapack 3 production starts at new Texas facility. 2026.26 Summer Update deploys globally alongside Cybertruck tooling lawsuit resolution.</description>
+      <link>{{SITE_URL}}/14</link>
+      <guid isPermaLink="false">s2026e14</guid>
+      <pubDate>Mon, 10 Aug 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e14.mp3" length="17470579" type="audio/mpeg" />
+      <itunes:summary>Tesla and SpaceX announce $16.8B Terafab AI semiconductor plant in Texas. Megapack 3 production starts at new Texas facility. 2026.26 Summer Update deploys globally alongside Cybertruck tooling lawsuit resolution.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>12:07</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e14.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>14</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
