@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 10 Aug 2026 09:59:29 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 17 Aug 2026 09:10:29 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -258,6 +258,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e14.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>14</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Roadster Flight Plans, Robotaxi Permit, V2L Launch</title>
+      <description>Tesla advances Roadster with flying stunt plans and designer confirmation; secures limited Nevada robotaxi permit; launches V2L adapter and certified pre-owned program; files for massive Texas solar factory; rolls out FSD v14.1 Lite and reveals Cybercab Starlink integration.</description>
+      <link>{{SITE_URL}}/15</link>
+      <guid isPermaLink="false">s2026e15</guid>
+      <pubDate>Mon, 17 Aug 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e15.mp3" length="15761717" type="audio/mpeg" />
+      <itunes:summary>Tesla advances Roadster with flying stunt plans and designer confirmation; secures limited Nevada robotaxi permit; launches V2L adapter and certified pre-owned program; files for massive Texas solar factory; rolls out FSD v14.1 Lite and reveals Cybercab Starlink integration.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:56</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e15.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>15</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
