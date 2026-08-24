@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 17 Aug 2026 09:10:29 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 24 Aug 2026 09:13:32 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -274,6 +274,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e15.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>15</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Cybercab Austin Launch Nears with Semi Surge</title>
+      <description>Covers Tesla Cybercab robotaxi launch preparations and Austin sweepstakes, Einride record 500 Semi order, Nevada Robotaxi service approval, Supercharger JD Power ranking drop, and Model Y L range test results.</description>
+      <link>{{SITE_URL}}/16</link>
+      <guid isPermaLink="false">s2026e16</guid>
+      <pubDate>Mon, 24 Aug 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e16.mp3" length="14583777" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla Cybercab robotaxi launch preparations and Austin sweepstakes, Einride record 500 Semi order, Nevada Robotaxi service approval, Supercharger JD Power ranking drop, and Model Y L range test results.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:06</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e16.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>16</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
