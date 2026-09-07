@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 31 Aug 2026 16:19:24 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 07 Sep 2026 14:24:19 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -306,6 +306,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e17.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>17</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Cybercab Launch Ignites NHTSA Probe and Stock Swings</title>
+      <description>Covers Tesla&apos;s Cybercab public rides debut in Austin with NHTSA audit, Robotaxi hitting 1M unsupervised miles, FSD v14.3.9 rollout with new evasion feature, China&apos;s 2.74M vehicle eye-tracking recall, Solar Roof exit impacts, and Model Y L suspension complaints.</description>
+      <link>{{SITE_URL}}/18</link>
+      <guid isPermaLink="false">s2026e18</guid>
+      <pubDate>Mon, 07 Sep 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e18.mp3" length="16539271" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla&apos;s Cybercab public rides debut in Austin with NHTSA audit, Robotaxi hitting 1M unsupervised miles, FSD v14.3.9 rollout with new evasion feature, China&apos;s 2.74M vehicle eye-tracking recall, Solar Roof exit impacts, and Model Y L suspension complaints.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:28</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e18.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>18</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
