@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 07 Sep 2026 14:24:19 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 14 Sep 2026 15:10:20 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -322,6 +322,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e18.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>18</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Roadster Reveal Locked, FSD Hits Slovenia, Berlin Production Surge</title>
+      <description>This episode covers Tesla&apos;s October 1 Roadster reveal announcement, FSD Supervised approval in Slovenia as the sixth EU market, Giga Berlin extra shifts to hit 7,500 weekly Model Ys, Cybercab China static displays, European Semi specs and 2027 deliveries, 2026.32 software ad blocker update, China sales data, Cybertruck Powershare expansion, US EV market share gains, and Vietnam market entry filing.</description>
+      <link>{{SITE_URL}}/19</link>
+      <guid isPermaLink="false">s2026e19</guid>
+      <pubDate>Mon, 14 Sep 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e19.mp3" length="16798456" type="audio/mpeg" />
+      <itunes:summary>This episode covers Tesla&apos;s October 1 Roadster reveal announcement, FSD Supervised approval in Slovenia as the sixth EU market, Giga Berlin extra shifts to hit 7,500 weekly Model Ys, Cybercab China static displays, European Semi specs and 2027 deliveries, 2026.32 software ad blocker update, China sales data, Cybertruck Powershare expansion, US EV market share gains, and Vietnam market entry filing.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:39</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e19.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>19</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
