@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 14 Sep 2026 15:10:20 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 21 Sep 2026 15:15:25 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -338,6 +338,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e19.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>19</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Roadster Deposits Return Amid Charging Tech Push</title>
+      <description>This episode covers Tesla reopening Roadster reservations with $50k deposits, debuting the Accordion Supercharger design, registering a Vietnam sales subsidiary, escalating Cybercab regulatory scrutiny, and expanding Semi Megacharger infrastructure through partners.</description>
+      <link>{{SITE_URL}}/20</link>
+      <guid isPermaLink="false">s2026e20</guid>
+      <pubDate>Mon, 21 Sep 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e20.mp3" length="16565002" type="audio/mpeg" />
+      <itunes:summary>This episode covers Tesla reopening Roadster reservations with $50k deposits, debuting the Accordion Supercharger design, registering a Vietnam sales subsidiary, escalating Cybercab regulatory scrutiny, and expanding Semi Megacharger infrastructure through partners.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:29</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e20.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>20</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
