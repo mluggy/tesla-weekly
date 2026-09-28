@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 21 Sep 2026 15:15:25 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 28 Sep 2026 16:54:11 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -354,6 +354,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e20.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>20</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Semi Production Milestone, Grok Bot Launch, FSD EU Shifts</title>
+      <description>Covers Tesla&apos;s Semi high-volume production start and 2,500-unit order, Grok Bot integration for vehicle tasks, FSD Czech approval with EU vote delay to December, Optimus Gen 3 design and ramp, plus charging expansions and Powerwall updates.</description>
+      <link>{{SITE_URL}}/21</link>
+      <guid isPermaLink="false">s2026e21</guid>
+      <pubDate>Mon, 28 Sep 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e21.mp3" length="15012404" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla&apos;s Semi high-volume production start and 2,500-unit order, Grok Bot integration for vehicle tasks, FSD Czech approval with EU vote delay to December, Optimus Gen 3 design and ramp, plus charging expansions and Powerwall updates.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:24</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e21.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>21</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
