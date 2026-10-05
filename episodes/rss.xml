@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 28 Sep 2026 16:54:11 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 05 Oct 2026 17:18:57 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -370,6 +370,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e21.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>21</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Tesla Q3 Beat, $30B Credit, Supercharger Surge</title>
+      <description>Covers Tesla Q3 deliveries of 486,532 vehicles beating estimates, $30 billion credit facilities for AI and manufacturing, Supercharger network exceeding 85,000 stalls with record 69 million sessions, plus software updates and energy storage figures.</description>
+      <link>{{SITE_URL}}/22</link>
+      <guid isPermaLink="false">s2026e22</guid>
+      <pubDate>Mon, 05 Oct 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e22.mp3" length="15971952" type="audio/mpeg" />
+      <itunes:summary>Covers Tesla Q3 deliveries of 486,532 vehicles beating estimates, $30 billion credit facilities for AI and manufacturing, Supercharger network exceeding 85,000 stalls with record 69 million sessions, plus software updates and energy storage figures.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>11:04</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e22.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>22</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
