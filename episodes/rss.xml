@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 05 Oct 2026 17:18:57 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 19 Oct 2026 16:13:36 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -386,6 +386,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e22.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>22</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Roadster Flies, FSD Slovakia Win, Robotaxi Midnight Push</title>
+      <description>Tesla unveiled its next-gen Roadster with SpaceX thrusters enabling flight, flips, and sub-second acceleration at a McGregor demo. Slovakia became the ninth EU country to approve FSD Supervised with rollout imminent. Austin Cybercab hours extended to midnight amid rapid fleet growth and the exit of Tesla&apos;s energy VP.</description>
+      <link>{{SITE_URL}}/23</link>
+      <guid isPermaLink="false">s2026e23</guid>
+      <pubDate>Mon, 19 Oct 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e23.mp3" length="14772047" type="audio/mpeg" />
+      <itunes:summary>Tesla unveiled its next-gen Roadster with SpaceX thrusters enabling flight, flips, and sub-second acceleration at a McGregor demo. Slovakia became the ninth EU country to approve FSD Supervised with rollout imminent. Austin Cybercab hours extended to midnight amid rapid fleet growth and the exit of Tesla&apos;s energy VP.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:14</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e23.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>23</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
