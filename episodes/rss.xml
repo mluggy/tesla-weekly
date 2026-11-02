@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 26 Oct 2026 15:22:06 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 02 Nov 2026 18:37:08 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -418,6 +418,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e24.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>24</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Robotaxi Fleet Surges Past 1,200, FSD Safety Milestone</title>
+      <description>Texas Robotaxi fleet reaches 1,204 vehicles with Cybercabs leading, Houston service area expands tenfold in Starship shape, FSD Supervised hits 6 million miles per major collision, plus Turo FSD rentals and new referral program.</description>
+      <link>{{SITE_URL}}/25</link>
+      <guid isPermaLink="false">s2026e25</guid>
+      <pubDate>Mon, 02 Nov 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e25.mp3" length="14172093" type="audio/mpeg" />
+      <itunes:summary>Texas Robotaxi fleet reaches 1,204 vehicles with Cybercabs leading, Houston service area expands tenfold in Starship shape, FSD Supervised hits 6 million miles per major collision, plus Turo FSD rentals and new referral program.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>09:49</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e25.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>25</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
