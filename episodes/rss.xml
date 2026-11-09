@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 02 Nov 2026 18:37:08 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 09 Nov 2026 19:03:45 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -434,6 +434,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e25.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>25</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Cybertruck Wind-Down, Fort Worth Robotaxi, Optimus Rentals</title>
+      <description>Tesla shifts Cybertruck capacity to Cybercab with mid-2027 Texas line closure and deposit refunds. Unsupervised Robotaxi launches in Fort Worth. Musk announces Optimus rental model over sales plus efficiency upgrades for Cybercab.</description>
+      <link>{{SITE_URL}}/26</link>
+      <guid isPermaLink="false">s2026e26</guid>
+      <pubDate>Mon, 09 Nov 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e26.mp3" length="15217618" type="audio/mpeg" />
+      <itunes:summary>Tesla shifts Cybertruck capacity to Cybercab with mid-2027 Texas line closure and deposit refunds. Unsupervised Robotaxi launches in Fort Worth. Musk announces Optimus rental model over sales plus efficiency upgrades for Cybercab.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:33</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e26.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>26</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
