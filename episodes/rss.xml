@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 09 Nov 2026 19:03:45 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 16 Nov 2026 18:45:30 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -450,6 +450,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e26.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>26</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>Cybercab Orders Open, Merger Buzz, Canada EV Shift</title>
+      <description>Personal Cybercab sales invites at $29,990 with subscription; Tesla-SpaceX merger talks advance toward December; Finland approves assisted driving while China sales slump and Canadian luxury tax threshold rises.</description>
+      <link>{{SITE_URL}}/27</link>
+      <guid isPermaLink="false">s2026e27</guid>
+      <pubDate>Mon, 16 Nov 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e27.mp3" length="15486844" type="audio/mpeg" />
+      <itunes:summary>Personal Cybercab sales invites at $29,990 with subscription; Tesla-SpaceX merger talks advance toward December; Finland approves assisted driving while China sales slump and Canadian luxury tax threshold rises.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>10:44</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e27.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>27</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
