@@ -10,7 +10,7 @@
       <link>{{SITE_URL}}</link>
     </image>
     <generator>coil — https://github.com/mluggy/coil</generator>
-    <lastBuildDate>Mon, 16 Nov 2026 18:45:30 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 23 Nov 2026 20:31:00 GMT</lastBuildDate>
     <atom:link href="{{SITE_URL}}/rss.xml" rel="self" type="application/rss+xml" />
     <copyright>CC BY 4.0</copyright>
     <language>en</language>
@@ -466,6 +466,22 @@
       <itunes:image href="{{SITE_URL}}/s2026e27.jpg" />
       <itunes:season>2026</itunes:season>
       <itunes:episode>27</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <dc:creator>Michael Lugassy</dc:creator>
+    </item>
+    <item>
+      <title>FSD v15 Debuts Amid Global Expansion Push</title>
+      <description>Covers the early rollout of FSD v15 with Reality View and 25x safety gains, Tesla self-funding Quebec&apos;s EV rebate extension, and new retail entry plus approvals in Argentina and Italy alongside energy and robotics updates.</description>
+      <link>{{SITE_URL}}/28</link>
+      <guid isPermaLink="false">s2026e28</guid>
+      <pubDate>Mon, 23 Nov 2026 00:00:00 GMT</pubDate>
+      <enclosure url="{{SITE_URL}}/s2026e28.mp3" length="13849525" type="audio/mpeg" />
+      <itunes:summary>Covers the early rollout of FSD v15 with Reality View and 25x safety gains, Tesla self-funding Quebec&apos;s EV rebate extension, and new retail entry plus approvals in Argentina and Italy alongside energy and robotics updates.</itunes:summary>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:duration>09:36</itunes:duration>
+      <itunes:image href="{{SITE_URL}}/s2026e28.jpg" />
+      <itunes:season>2026</itunes:season>
+      <itunes:episode>28</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <dc:creator>Michael Lugassy</dc:creator>
     </item>
